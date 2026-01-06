@@ -229,8 +229,18 @@ export const useModelScreenLogic = (navigation: any) => {
 
   const confirmDelete = async (model: StoredModel, showDialog: (title: string, message: string, actions: any[]) => void) => {
     try {
-      await modelDownloader.deleteModel(model.path);
-      await modelSettingsService.deleteModelSettings(model.path);
+      const modelWithFiles = model as StoredModel & { mlxFiles?: StoredModel[] };
+      
+      if (modelWithFiles.mlxFiles && modelWithFiles.mlxFiles.length > 0) {
+        for (const file of modelWithFiles.mlxFiles) {
+          await modelDownloader.deleteModel(file.path);
+          await modelSettingsService.deleteModelSettings(file.path);
+        }
+      } else {
+        await modelDownloader.deleteModel(model.path);
+        await modelSettingsService.deleteModelSettings(model.path);
+      }
+      
       await refreshStoredModels();
     } catch (error) {
       showDialog('Error', 'Failed to delete model', []);
