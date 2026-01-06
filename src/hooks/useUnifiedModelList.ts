@@ -50,19 +50,6 @@ export const useUnifiedModelList = (
     filesToDownload: any[]
   } | null>(null);
 
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (searchQuery.trim()) {
-        searchHuggingFace(searchQuery);
-      } else {
-        setHfModels([]);
-        setShowingHfResults(false);
-      }
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
-
   const showDialog = (title: string, message: string) => {
     setDialogTitle(title);
     setDialogMessage(message);
@@ -145,6 +132,15 @@ export const useUnifiedModelList = (
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
+  };
+
+  const handleSearchSubmit = () => {
+    if (searchQuery.trim()) {
+      searchHuggingFace(searchQuery);
+    } else {
+      setHfModels([]);
+      setShowingHfResults(false);
+    }
   };
 
   const clearSearch = () => {
@@ -433,6 +429,7 @@ export const useUnifiedModelList = (
     handleFilterExpandChange,
     convertHfModelToDownloadable,
     handleSearch,
+    handleSearchSubmit,
     clearSearch,
     isModelDownloaded,
     handleModelPress,

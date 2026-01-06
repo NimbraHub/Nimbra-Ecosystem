@@ -7,12 +7,14 @@ import { theme } from '../../constants/theme';
 interface HuggingFaceSearchBarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onSearchSubmit: () => void;
   onClearSearch: () => void;
 }
 
 export const HuggingFaceSearchBar: React.FC<HuggingFaceSearchBarProps> = ({
   searchQuery,
   onSearchChange,
+  onSearchSubmit,
   onClearSearch
 }) => {
   const { theme: currentTheme } = useTheme();
@@ -23,6 +25,7 @@ export const HuggingFaceSearchBar: React.FC<HuggingFaceSearchBarProps> = ({
       <Searchbar
         placeholder="Search on HuggingFace..."
         onChangeText={onSearchChange}
+        onSubmitEditing={onSearchSubmit}
         value={searchQuery}
         style={[styles.searchBar, { backgroundColor: themeColors.cardBackground }]}
         inputStyle={{ color: themeColors.text }}

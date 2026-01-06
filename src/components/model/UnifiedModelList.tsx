@@ -99,6 +99,7 @@ const UnifiedModelList: React.FC<UnifiedModelListProps> = ({
         <HuggingFaceSearchBar
           searchQuery={logic.searchQuery}
           onSearchChange={logic.handleSearch}
+          onSearchSubmit={logic.handleSearchSubmit}
           onClearSearch={logic.clearSearch}
         />
 
