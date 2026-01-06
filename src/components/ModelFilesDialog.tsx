@@ -6,12 +6,14 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Chip, Button } from 'react-native-paper';
 import { HFModelDetails, HFFile } from '../services/HuggingFaceService';
 import { huggingFaceService } from '../services/HuggingFaceService';
+import { ModelFormat } from '../types/models';
 
 interface ModelFilesDialogProps {
   visible: boolean;
   onClose: () => void;
   modelDetails: HFModelDetails | null;
   onDownloadFile: (filename: string, downloadUrl: string) => Promise<void>;
+  onDownloadMLXModel?: (modelId: string, files: Array<{ filename: string; downloadUrl: string; size: number }>) => Promise<void>;
   isDownloading?: boolean;
 }
 
@@ -20,13 +22,36 @@ export default function ModelFilesDialog({
   onClose,
   modelDetails,
   onDownloadFile,
+  onDownloadMLXModel,
   isDownloading = false,
 }: ModelFilesDialogProps) {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme];
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
+  const [downloadingMLXPackage, setDownloadingMLXPackage] = useState(false);
 
   if (!visible || !modelDetails) return null;
+
+  const isMLXModel = modelDetails.modelFormat === ModelFormat.MLX;
+  const isGGUFModel = modelDetails.modelFormat === ModelFormat.GGUF;
+
+  const handleMLXBatchDownload = async () => {
+    if (!modelDetails?.mlxFileGroup || !onDownloadMLXModel) return;
+
+    setDownloadingMLXPackage(true);
+    try {
+      const filesToDownload = modelDetails.mlxFileGroup.required.map(file => ({
+        filename: file.rfilename,
+        downloadUrl: file.url || '',
+        size: file.size || 0,
+      }));
+
+      await onDownloadMLXModel(modelDetails.id, filesToDownload);
+    } catch (error) {
+    } finally {
+      setDownloadingMLXPackage(false);
+    }
+  };
 
   const handleDownload = async (filename: string, downloadUrl: string) => {
     setDownloadingFile(filename);
@@ -35,6 +60,11 @@ export default function ModelFilesDialog({
     } finally {
       setDownloadingFile(null);
     }
+  };
+
+  const isRequiredMLXFile = (filename: string): boolean => {
+    if (!isMLXModel || !modelDetails.mlxFileGroup) return false;
+    return modelDetails.mlxFileGroup.required.some(f => f.rfilename === filename);
   };
 
   const renderFileItem = (file: HFFile, index: number) => {
@@ -58,14 +88,26 @@ export default function ModelFilesDialog({
             >
               {huggingFaceService.formatModelSize(file.size)}
             </Chip>
-            <Chip
-              mode="flat"
-              style={[styles.fileChip, styles.quantChip]}
-              textStyle={styles.chipText}
-              icon="cog"
-            >
-              {huggingFaceService.extractQuantization(file.filename)}
-            </Chip>
+            {isGGUFModel && (
+              <Chip
+                mode="flat"
+                style={[styles.fileChip, styles.quantChip]}
+                textStyle={styles.chipText}
+                icon="cog"
+              >
+                {huggingFaceService.extractQuantization(file.filename)}
+              </Chip>
+            )}
+            {isMLXModel && isRequiredMLXFile(file.filename) && (
+              <Chip
+                mode="flat"
+                style={[styles.fileChip, styles.mlxRequiredChip]}
+                textStyle={styles.chipText}
+                icon="apple"
+              >
+                Required
+              </Chip>
+            )}
             {modelDetails?.hasVision && file.filename.toLowerCase().includes('mmproj') && (
               <Chip
                 mode="flat"
@@ -113,11 +155,23 @@ export default function ModelFilesDialog({
           <View style={styles.header}>
             <View style={styles.titleContainer}>
               <Text style={[styles.title, { color: themeColors.text }]}>{modelDetails.id}</Text>
-              {modelDetails.hasVision && (
-                <View style={styles.visionBadge}>
-                  <Text style={styles.visionBadgeText}>👁 Vision</Text>
-                </View>
-              )}
+              <View style={styles.badgeContainer}>
+                {modelDetails.hasVision && (
+                  <View style={styles.visionBadge}>
+                    <Text style={styles.visionBadgeText}>Vision</Text>
+                  </View>
+                )}
+                {isMLXModel && (
+                  <View style={styles.mlxBadge}>
+                    <Text style={styles.mlxBadgeText}>MLX</Text>
+                  </View>
+                )}
+                {isGGUFModel && (
+                  <View style={styles.ggufBadge}>
+                    <Text style={styles.ggufBadgeText}>GGUF</Text>
+                  </View>
+                )}
+              </View>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <MaterialCommunityIcons name="close" size={24} color={themeColors.text} />
@@ -129,7 +183,34 @@ export default function ModelFilesDialog({
             <Text style={[styles.sectionSubtitle, { color: themeColors.secondaryText }]}>
               {modelDetails.files.length} file{modelDetails.files.length !== 1 ? 's' : ''} available
             </Text>
+            {isMLXModel && modelDetails.mlxFileGroup && onDownloadMLXModel && (
+              <Text style={[styles.mlxNote, { color: themeColors.secondaryText }]}>
+                Total package: {huggingFaceService.formatModelSize(modelDetails.mlxFileGroup.totalSize)} ({modelDetails.mlxFileGroup.required.length} required files)
+              </Text>
+            )}
           </View>
+
+          {isMLXModel && modelDetails.mlxFileGroup && onDownloadMLXModel && (
+            <TouchableOpacity
+              style={[
+                styles.mlxBatchButton,
+                {
+                  backgroundColor: downloadingMLXPackage ? themeColors.primary + '60' : themeColors.primary,
+                },
+              ]}
+              onPress={handleMLXBatchDownload}
+              disabled={downloadingMLXPackage}
+            >
+              {downloadingMLXPackage ? (
+                <ActivityIndicator size="small" color="#FFFFFF" style={styles.loadingIcon} />
+              ) : (
+                <MaterialCommunityIcons name="package-down" size={20} color="#FFFFFF" style={styles.buttonIcon} />
+              )}
+              <Text style={styles.mlxBatchButtonText}>
+                {downloadingMLXPackage ? 'Downloading Complete Package...' : 'Download Complete MLX Package'}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           <ScrollView
             style={styles.filesList}
@@ -173,6 +254,11 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 12,
   },
+  badgeContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
   title: {
     fontSize: 18,
     fontWeight: '600',
@@ -190,6 +276,30 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#7B2CBF',
   },
+  mlxBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  mlxBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#007AFF',
+  },
+  ggufBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(52, 199, 89, 0.1)',
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  ggufBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#34C759',
+  },
   closeButton: {
     padding: 4,
   },
@@ -204,6 +314,26 @@ const styles = StyleSheet.create({
   sectionSubtitle: {
     fontSize: 14,
     marginBottom: 4,
+  },
+  mlxNote: {
+    fontSize: 13,
+    marginTop: 8,
+    fontWeight: '500',
+  },
+  mlxBatchButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginBottom: 16,
+  },
+  mlxBatchButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   filesList: {
     maxHeight: Dimensions.get('window').height - 360,
@@ -243,6 +373,9 @@ const styles = StyleSheet.create({
   },
   projectionChip: {
     backgroundColor: 'rgba(123, 44, 191, 0.1)',
+  },
+  mlxRequiredChip: {
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
   },
   chipText: {
     fontSize: 12,

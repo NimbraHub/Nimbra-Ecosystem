@@ -5,6 +5,8 @@ import {FileManager} from './FileManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import {hasEnoughSpace} from '../utils/storageUtils';
+import { mlxStorageManager } from './MLXStorageManager';
+import { ModelFormat } from '../types/models';
 
 export class DownloadTaskManager extends EventEmitter {
   private activeDownloads: Map<string, DownloadTaskInfo> = new Map();
@@ -444,5 +446,117 @@ export class DownloadTaskManager extends EventEmitter {
     this.activeDownloads.clear();
     this.removeAllListeners();
     this.isInitialized = false;
+  }
+
+  async downloadMLXModel(
+    modelId: string,
+    files: Array<{ filename: string; downloadUrl: string; size: number }>,
+    authToken?: string
+  ): Promise<{ downloadId: number }> {
+    const sanitizedModelId = mlxStorageManager.sanitizeModelId(modelId);
+    const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+
+    const hasSpace = await hasEnoughSpace(totalSize);
+    if (!hasSpace) {
+      throw new Error('insufficient_storage');
+    }
+
+    const modelDir = await mlxStorageManager.createMLXDirectory(modelId);
+    const downloadId = this.nextDownloadId++;
+
+    const tempDownloads: string[] = [];
+    let downloadedBytes = 0;
+
+    try {
+      for (const file of files) {
+        const tempFilePath = `${this.fileManager.getDownloadDir()}/${sanitizedModelId}_${file.filename}`;
+        const finalFilePath = `${modelDir}/${file.filename}`;
+
+        tempDownloads.push(tempFilePath);
+
+        const fileDownloadId = await this.startDownload(
+          `${sanitizedModelId}_${file.filename}`,
+          file.downloadUrl,
+          authToken
+        );
+
+        const downloadInfo = this.activeDownloads.get(`${sanitizedModelId}_${file.filename}`);
+        if (downloadInfo) {
+          downloadInfo.downloadId = downloadId;
+        }
+
+        await new Promise<void>((resolve, reject) => {
+          const progressHandler = (event: DownloadProgressEvent) => {
+            if (event.modelName === `${sanitizedModelId}_${file.filename}`) {
+              const fileProgress = (event.bytesDownloaded / totalSize) * 100;
+              const combinedProgress = (downloadedBytes + event.bytesDownloaded) / totalSize * 100;
+
+              this.emit('progress', {
+                progress: combinedProgress,
+                bytesDownloaded: downloadedBytes + event.bytesDownloaded,
+                totalBytes: totalSize,
+                status: 'downloading',
+                modelName: sanitizedModelId,
+                downloadId,
+              });
+            }
+          };
+
+          const completeHandler = (event: any) => {
+            if (event.modelName === `${sanitizedModelId}_${file.filename}`) {
+              this.off('progress', progressHandler);
+              this.off('downloadCompleted', completeHandler);
+              this.off('downloadFailed', errorHandler);
+              downloadedBytes += file.size;
+              resolve();
+            }
+          };
+
+          const errorHandler = (event: any) => {
+            if (event.modelName === `${sanitizedModelId}_${file.filename}`) {
+              this.off('progress', progressHandler);
+              this.off('downloadCompleted', completeHandler);
+              this.off('downloadFailed', errorHandler);
+              reject(new Error(event.error || 'download_failed'));
+            }
+          };
+
+          this.on('progress', progressHandler);
+          this.on('downloadCompleted', completeHandler);
+          this.on('downloadFailed', errorHandler);
+        });
+
+        await this.fileManager.moveFile(tempFilePath, finalFilePath);
+      }
+
+      const validation = await mlxStorageManager.validateMLXModel(modelId);
+      if (!validation.valid) {
+        throw new Error(`incomplete_mlx_model: ${validation.missing.join(', ')}`);
+      }
+
+      this.emit('downloadCompleted', {
+        modelName: sanitizedModelId,
+        downloadId,
+        modelFormat: ModelFormat.MLX,
+      });
+
+      return { downloadId };
+    } catch (error) {
+      for (const tempPath of tempDownloads) {
+        try {
+          await this.fileManager.deleteFile(tempPath);
+        } catch {}
+      }
+
+      await mlxStorageManager.cleanupFailedMLXDownload(modelId);
+
+      this.emit('downloadFailed', {
+        modelName: sanitizedModelId,
+        downloadId,
+        error: error instanceof Error ? error.message : 'mlx_download_failed',
+      });
+
+      throw error;
+    }
   }
 }

@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 import { isVisionRepo, detectVisionCapabilities } from '../utils/multimodalHelpers';
-import { ModelFile } from '../types/models';
+import { ModelFile, ModelFormat, MLXFileGroup } from '../types/models';
 
 interface HFModel {
   _id?: string;
@@ -32,6 +32,8 @@ interface HFModelDetails extends HFModel {
   files: HFFile[];
   description?: string;
   cardData?: any;
+  modelFormat?: ModelFormat;
+  mlxFileGroup?: MLXFileGroup;
 }
 
 interface SearchParams {
@@ -150,18 +152,25 @@ class HuggingFaceService {
 
       const tree = await response.json();
       
-      const ggufFiles = tree
-        .filter((item: any) => {
-          const isFile = item.type === 'file';
-          const isGgufOrBin = item.path.endsWith('.gguf') || item.path.endsWith('.bin');
-          return isFile && isGgufOrBin;
-        })
+      const modelFiles = tree
+        .filter((item: any) => item.type === 'file')
         .map((file: any) => ({
           filename: file.path,
           size: file.size || 0,
           downloadUrl: `${this.baseUrl}/${modelId}/resolve/main/${file.path}`,
           lastModified: file.lastModified || new Date().toISOString(),
         }));
+
+      const modelFormat = this.detectModelType(modelId, modelFiles);
+      
+      if (modelFormat === ModelFormat.MLX) {
+        return modelFiles;
+      }
+      
+      const ggufFiles = modelFiles.filter((file: HFFile) => {
+        const isGgufOrBin = file.filename.endsWith('.gguf') || file.filename.endsWith('.bin');
+        return isGgufOrBin;
+      });
 
       return ggufFiles;
     } catch (error) {
@@ -191,14 +200,21 @@ class HuggingFaceService {
         url: f.downloadUrl
       }));
       
+      const modelFormat = this.detectModelType(modelId, files, model.tags);
       const hasVision = isVisionRepo(modelFiles);
       const capabilities = hasVision ? ['vision', 'text'] : ['text'];
+      
+      const mlxFileGroup = modelFormat === ModelFormat.MLX 
+        ? this.getRequiredMLXFiles(files)
+        : undefined;
       
       return {
         ...model,
         files,
         hasVision,
         capabilities,
+        modelFormat,
+        mlxFileGroup,
       };
     } catch (error) {
       throw error;
@@ -232,6 +248,73 @@ class HuggingFaceService {
     if (f32Match) return 'F32';
     
     return 'Unknown';
+  }
+
+  detectModelType(modelId: string, files: HFFile[], tags?: string[]): ModelFormat {
+    const hasConfigJson = files.some(f => f.filename === 'config.json');
+    const hasTokenizerJson = files.some(f => f.filename === 'tokenizer.json');
+    const hasSafetensors = files.some(f => f.filename.endsWith('.safetensors'));
+    const hasWeightsNpz = files.some(f => f.filename.endsWith('.npz'));
+    const hasGguf = files.some(f => f.filename.endsWith('.gguf'));
+    
+    const repoNameContainsMlx = modelId.toLowerCase().includes('mlx') || 
+                                 modelId.toLowerCase().includes('mlx-community');
+    const tagsContainMlx = tags?.some(tag => tag.toLowerCase().includes('mlx'));
+    
+    if ((hasConfigJson && hasTokenizerJson && (hasSafetensors || hasWeightsNpz)) || 
+        repoNameContainsMlx || 
+        tagsContainMlx) {
+      return ModelFormat.MLX;
+    }
+    
+    if (hasGguf) {
+      return ModelFormat.GGUF;
+    }
+    
+    return ModelFormat.UNKNOWN;
+  }
+
+  getRequiredMLXFiles(files: HFFile[]): MLXFileGroup {
+    const required: ModelFile[] = [];
+    const optional: ModelFile[] = [];
+    let totalSize = 0;
+    let isSharded = false;
+
+    const mlxRequiredFiles = [
+      'config.json',
+      'tokenizer.json',
+      'tokenizer_config.json',
+    ];
+
+    files.forEach(file => {
+      const fileData: ModelFile = {
+        rfilename: file.filename,
+        size: file.size,
+        url: file.downloadUrl,
+      };
+
+      if (mlxRequiredFiles.includes(file.filename)) {
+        required.push(fileData);
+        totalSize += file.size;
+      } else if (file.filename.endsWith('.safetensors') || file.filename.endsWith('.npz')) {
+        required.push(fileData);
+        totalSize += file.size;
+        if (file.filename.match(/model-\d+-of-\d+\.safetensors/)) {
+          isSharded = true;
+        }
+      } else if (file.filename === 'generation_config.json' || 
+                 file.filename === 'preprocessor_config.json' ||
+                 file.filename === 'special_tokens_map.json') {
+        optional.push(fileData);
+      }
+    });
+
+    return {
+      required,
+      optional,
+      totalSize,
+      isSharded,
+    };
   }
 
   private processSearchResults(models: HFModel[]): HFModel[] {

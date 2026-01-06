@@ -5,7 +5,8 @@ import { EventEmitter } from './EventEmitter';
 import { FileManager } from './FileManager';
 import { StoredModel } from './ModelDownloaderTypes';
 import { detectVisionCapabilities } from '../utils/multimodalHelpers';
-import { ModelType } from '../types/models';
+import { ModelType, ModelFormat } from '../types/models';
+import { mlxStorageManager } from './MLXStorageManager';
 
 export class StoredModelsManager extends EventEmitter {
   private fileManager: FileManager;
@@ -118,13 +119,19 @@ export class StoredModelsManager extends EventEmitter {
         console.log('files_found', dir.length);
 
         const models: StoredModel[] = [];
+        
         if (dir.length > 0) {
           console.log('processing_files');
           for (const name of dir) {
             try {
               const path = `${baseDir}/${name}`;
               const fileInfo = await FileSystem.getInfoAsync(path, { size: true });
-              if (!fileInfo.exists || (fileInfo as any).isDirectory) {
+              
+              if ((fileInfo as any).isDirectory) {
+                continue;
+              }
+              
+              if (!fileInfo.exists) {
                 continue;
               }
 
@@ -147,6 +154,8 @@ export class StoredModelsManager extends EventEmitter {
                 isExternal: false,
                 downloaded: true,
                 modelType,
+                modelFormat: ModelFormat.GGUF,
+                isDirectory: false,
                 capabilities: capabilities.capabilities,
                 supportsMultimodal: capabilities.isVision,
                 compatibleProjectionModels: capabilities.compatibleProjections,
@@ -156,6 +165,28 @@ export class StoredModelsManager extends EventEmitter {
               console.log('scan_file_error', name, fileError);
             }
           }
+        }
+
+        console.log('scanning_mlx_models');
+        const mlxModels = await mlxStorageManager.listMLXModels();
+        console.log('mlx_models_found', mlxModels.length);
+
+        for (const mlx of mlxModels) {
+          models.push({
+            id: `${mlx.modelId}-${Date.now()}`,
+            name: mlx.modelId,
+            path: mlx.path,
+            size: mlx.size,
+            modified: mlx.modified,
+            isExternal: false,
+            downloaded: true,
+            modelType: ModelType.LLM,
+            modelFormat: ModelFormat.MLX,
+            isDirectory: true,
+            fileCount: mlx.fileCount,
+            capabilities: ['text'],
+            supportsMultimodal: false,
+          });
         }
 
         console.log('saving_to_storage', models.length);
