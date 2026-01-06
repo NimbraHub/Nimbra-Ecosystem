@@ -239,14 +239,16 @@ class LlamaManager {
     let fullResponse = '';
     this.isCancelled = false;
     this.tokenProcessingService.setCancelled(false);
-    
+    const settings = customSettings ?? this.settingsManager.getSettings();
+    const stop = [...settings.stopWords, '\n', '\\n'];
 
     try {
       const processedMessages = await Promise.all(
         messages.map(async (msg) => {
           const processed = this.multimodalService.parseMultimodalMessage(msg.content);
+          const hasMedia = processed.images?.length || processed.audioFiles?.length;
           
-          if (this.multimodalService.isMultimodalInitialized() && (processed.images?.length || processed.audioFiles?.length)) {
+          if (this.multimodalService.isMultimodalInitialized() && hasMedia) {
             try {
               const content = await this.multimodalService.createMultimodalContent(processed);
               
@@ -261,7 +263,7 @@ class LlamaManager {
                 role: msg.role,
                 content: content,
               };
-            } catch (error) {
+            } catch {
               return {
                 role: msg.role,
                 content: processed.text,
@@ -276,6 +278,61 @@ class LlamaManager {
         })
       );
 
+      let tokenCount = 0;
+
+      await this.context.completion(
+        {
+          messages: processedMessages,
+          n_predict: settings.maxTokens,
+          stop,
+          temperature: settings.temperature,
+          top_k: settings.topK,
+          top_p: settings.topP,
+          min_p: settings.minP,
+          jinja: settings.jinja,
+          grammar: settings.grammar || undefined,
+          n_probs: settings.nProbs,
+          penalty_last_n: settings.penaltyLastN,
+          penalty_repeat: settings.penaltyRepeat,
+          penalty_freq: settings.penaltyFreq,
+          penalty_present: settings.penaltyPresent,
+          mirostat: settings.mirostat,
+          mirostat_tau: settings.mirostatTau,
+          mirostat_eta: settings.mirostatEta,
+          dry_multiplier: settings.dryMultiplier,
+          dry_base: settings.dryBase,
+          dry_allowed_length: settings.dryAllowedLength,
+          dry_penalty_last_n: settings.dryPenaltyLastN,
+          dry_sequence_breakers: settings.drySequenceBreakers,
+          ignore_eos: settings.ignoreEos,
+          logit_bias: settings.logitBias.length > 0 ? settings.logitBias : undefined,
+          seed: settings.seed,
+          xtc_probability: settings.xtcProbability,
+          xtc_threshold: settings.xtcThreshold,
+          typical_p: settings.typicalP,
+          enable_thinking: settings.enableThinking,
+        },
+        (data) => {
+          if (this.isCancelled) {
+            return false;
+          }
+
+          this.tokenProcessingService.queueToken(data.token);
+          fullResponse += data.token;
+          tokenCount += 1;
+
+          void this.tokenProcessingService.startTokenProcessing(onToken);
+
+          if (this.tokenProcessingService.isCancelling()) {
+            this.isCancelled = true;
+            return false;
+          }
+
+          return true;
+        }
+      );
+
+      await this.tokenProcessingService.startTokenProcessing(onToken);
       await this.tokenProcessingService.waitForTokenQueueCompletion();
 
       return fullResponse.trim();
