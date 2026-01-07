@@ -86,7 +86,7 @@ export const useModelDownloadHandlers = (
       navigation.navigate('Downloads' as never);
 
       const downloadPromises = downloadFiles.map(async (file) => {
-        const fullFilename = `${modelId.replace('/', '_')}_${file.filename}`;
+        const fullFilename = file.filename;
         
         try {
           setDownloadProgress((prev: any) => ({
@@ -269,7 +269,7 @@ export const useModelDownloadHandlers = (
       }
 
       const downloadPromises = downloadFiles.map(async (file) => {
-        const fullFilename = `${pendingVisionDownload.modelId.replace('/', '_')}_${file.filename}`;
+        const fullFilename = file.filename;
         
         try {
           setDownloadProgress((prev: any) => ({

@@ -91,15 +91,14 @@ export const groupMLXModels = (items: StoredModel[]): (StoredModel | MLXGroup)[]
   const others: StoredModel[] = [];
 
   items.forEach(model => {
-    const parts = model.name.split('_');
-    const lower = model.name.toLowerCase();
+    const dirPath = model.path.substring(0, model.path.lastIndexOf('/'));
+    const dirName = dirPath.split('/').pop() || '';
 
-    if (parts.length >= 2 && (parts[0].includes('/') || lower.includes('mlx'))) {
-      const key = parts.slice(0, 2).join('_');
-      if (!groups[key]) {
-        groups[key] = [];
+    if (dirName) {
+      if (!groups[dirPath]) {
+        groups[dirPath] = [];
       }
-      groups[key].push(model);
+      groups[dirPath].push(model);
     } else {
       others.push(model);
     }
@@ -107,7 +106,7 @@ export const groupMLXModels = (items: StoredModel[]): (StoredModel | MLXGroup)[]
 
   const grouped: (StoredModel | MLXGroup)[] = [];
 
-  Object.entries(groups).forEach(([key, files]) => {
+  Object.entries(groups).forEach(([dirPath, files]) => {
     if (files.length === 1) {
       grouped.push(files[0]);
       return;
@@ -115,26 +114,24 @@ export const groupMLXModels = (items: StoredModel[]): (StoredModel | MLXGroup)[]
 
     const size = files.reduce((sum, file) => sum + (file.size || 0), 0);
     const first = files[0];
-    const name = key.replace(/_/g, '/');
-    const dirPath = first.path.substring(0, first.path.lastIndexOf('/'));
+    const dirName = dirPath.split('/').pop() || '';
 
     console.log('mlx_group_created', {
-      key,
-      name,
-      firstFilePath: first.path,
       dirPath,
+      dirName,
+      firstFilePath: first.path,
       filesCount: files.length,
       fileNames: files.map(f => f.name)
     });
 
     grouped.push({
       ...first,
-      name,
+      name: dirName,
       size,
       path: dirPath,
       isMLXGroup: true,
       mlxFiles: files,
-      groupKey: key,
+      groupKey: dirPath,
     });
   });
 

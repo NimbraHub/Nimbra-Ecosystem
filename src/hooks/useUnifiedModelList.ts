@@ -297,7 +297,7 @@ export const useUnifiedModelList = (
     navigation.navigate('Downloads' as never);
 
     const downloadPromises = files.map(async (file) => {
-      const fullFilename = `${modelId.replace('/', '_')}_${file.filename}`;
+      const fullFilename = file.filename;
       
       if (isModelDownloaded(fullFilename)) {
         return;

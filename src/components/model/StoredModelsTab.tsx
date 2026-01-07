@@ -58,48 +58,47 @@ export const StoredModelsTab: React.FC<StoredModelsTabProps> = ({
   };
 
   const groupMLXModels = (models: StoredModel[]): StoredModel[] => {
-    const mlxGroups: { [key: string]: StoredModel[] } = {};
-    const otherModels: StoredModel[] = [];
+    const groups: { [key: string]: StoredModel[] } = {};
+    const others: StoredModel[] = [];
 
     models.forEach(model => {
-      const nameParts = model.name.split('_');
-      if (nameParts.length >= 2 && (nameParts[0].includes('/') || model.name.toLowerCase().includes('mlx'))) {
-        const baseModelName = nameParts.slice(0, 2).join('_');
-        if (!mlxGroups[baseModelName]) {
-          mlxGroups[baseModelName] = [];
+      const dirPath = model.path.substring(0, model.path.lastIndexOf('/'));
+      const dirName = dirPath.split('/').pop() || '';
+
+      if (dirName) {
+        if (!groups[dirPath]) {
+          groups[dirPath] = [];
         }
-        mlxGroups[baseModelName].push(model);
+        groups[dirPath].push(model);
       } else {
-        otherModels.push(model);
+        others.push(model);
       }
     });
 
-    const groupedMLXModels: any[] = [];
+    const grouped: any[] = [];
 
-    Object.entries(mlxGroups).forEach(([baseName, files]) => {
+    Object.entries(groups).forEach(([dirPath, files]) => {
       if (files.length === 1) {
-        groupedMLXModels.push(files[0]);
+        grouped.push(files[0]);
         return;
       }
 
-      const totalSize = files.reduce((sum, file) => sum + (file.size || 0), 0);
-      const firstFile = files[0];
-      const modelName = baseName.replace(/_/g, '/');
+      const size = files.reduce((sum, file) => sum + (file.size || 0), 0);
+      const first = files[0];
+      const dirName = dirPath.split('/').pop() || '';
 
-      const groupItem = {
-        ...firstFile,
-        name: modelName,
-        size: totalSize,
-        path: firstFile.path,
+      grouped.push({
+        ...first,
+        name: dirName,
+        size,
+        path: dirPath,
         isMLXGroup: true,
         mlxFiles: files,
-        groupKey: baseName,
-      };
-
-      groupedMLXModels.push(groupItem);
+        groupKey: dirPath,
+      });
     });
 
-    return [...groupedMLXModels, ...otherModels];
+    return [...grouped, ...others];
   };
 
   const displayModels = groupMLXModels(storedModels);
@@ -216,7 +215,7 @@ export const StoredModelsTab: React.FC<StoredModelsTabProps> = ({
                       style={styles.fileIcon}
                     />
                     <Text style={[styles.fileName, { color: themeColors.text }]} numberOfLines={1}>
-                      {file.name.split('_').slice(2).join('_')}
+                      {file.name}
                     </Text>
                   </View>
                   <Text style={[styles.fileSize, { color: themeColors.secondaryText }]}>

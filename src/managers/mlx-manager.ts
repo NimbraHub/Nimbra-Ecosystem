@@ -26,7 +26,19 @@ class MlxManager implements InferenceManager {
   private extractModelId(modelPath: string): string {
     const parts = modelPath.split('/');
     const lastPart = parts[parts.length - 1] || parts[parts.length - 2];
-    return lastPart.replace(/_/g, '/');
+    return lastPart;
+  }
+
+  private async extractModelIdFromDirectory(dirPath: string): Promise<string> {
+    try {
+      const parts = dirPath.split('/');
+      const dirName = parts[parts.length - 1] || parts[parts.length - 2];
+      console.log('mlx_extracted_model_id', { dirPath, dirName });
+      return dirName;
+    } catch (error) {
+      console.log('mlx_extract_id_error', error);
+      return this.extractModelId(dirPath);
+    }
   }
 
   private async validateMLXModel(modelPath: string): Promise<boolean> {
@@ -91,7 +103,11 @@ class MlxManager implements InferenceManager {
       throw new Error('mlx_model_invalid_structure');
     }
 
-    const modelId = this.extractModelId(modelPath);
+    const dirInfo = await FileSystem.getInfoAsync(modelPath);
+    const modelId = dirInfo.isDirectory 
+      ? await this.extractModelIdFromDirectory(modelPath)
+      : this.extractModelId(modelPath);
+    
     console.log('mlx_model_id', modelId);
 
     try {
