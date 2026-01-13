@@ -57,29 +57,31 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const engine = engineService.get();
       const pathLower = modelPath.toLowerCase();
       const isGguf = pathLower.endsWith('.gguf');
-      const isSafetensors = pathLower.endsWith('.safetensors') || 
-                           pathLower.includes('/models/mlx/') ||
-                           pathLower.includes('mlx-community');
+      const isMLX = pathLower.includes('/huggingface/models/') || 
+                    pathLower.includes('mlx-community') || 
+                    pathLower.includes('mlx-');
 
       if (engine === 'mlx' && isGguf) {
-        showSnackbar('MLX engine requires safetensors format', 'error');
+        showSnackbar('MLX engine requires MLX format', 'error');
         setIsModelLoading(false);
         return false;
       }
 
-      if (engine === 'llama' && isSafetensors) {
+      if (engine === 'llama' && isMLX) {
         showSnackbar('Llama.cpp requires GGUF format', 'error');
         setIsModelLoading(false);
         return false;
       }
 
-      const fileInfo = await FileSystem.getInfoAsync(modelPath);
-      if (!fileInfo.exists) {
-        console.log('model_file_missing', modelPath);
-        showSnackbar('Model file not found', 'error');
-        modelDownloader.refresh();
-        setIsModelLoading(false);
-        return false;
+      if (!isMLX) {
+        const fileInfo = await FileSystem.getInfoAsync(modelPath);
+        if (!fileInfo.exists) {
+          console.log('model_file_missing', modelPath);
+          showSnackbar('Model file not found', 'error');
+          modelDownloader.refresh();
+          setIsModelLoading(false);
+          return false;
+        }
       }
       
       if (mmProjectorPath) {
@@ -95,7 +97,7 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setSelectedModelPath(modelPath);
       updateProjectorState();
       
-      const modelName = modelPath.split('/').pop() || 'Model';
+      const modelName = isMLX ? modelPath : (modelPath.split('/').pop() || 'Model');
       const engineLabel = engine === 'mlx' ? ' (MLX)' : '';
       const multimodalText = mmProjectorPath ? ' (Multimodal)' : '';
       showSnackbar(`${modelName}${engineLabel}${multimodalText} loaded successfully`);
@@ -105,8 +107,8 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.log('model_load_error', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       
-      if (errorMsg.includes('mlx_model_invalid_structure')) {
-        showSnackbar('MLX model missing required files', 'error');
+      if (errorMsg.includes('mlx_model_not_downloaded')) {
+        showSnackbar('MLX model not found. Please download it first.', 'error');
       } else {
         showSnackbar('Error loading model', 'error');
       }

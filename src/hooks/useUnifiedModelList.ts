@@ -5,6 +5,7 @@ import { huggingFaceService, HFModel, HFModelDetails } from '../services/Hugging
 import { modelDownloader } from '../services/ModelDownloader';
 import { DownloadableModel } from '../components/model/DownloadableModelItem';
 import { ModelFormat } from '../types/models';
+import { ModelManager } from 'react-native-nitro-mlx';
 
 export const useUnifiedModelList = (
   storedModels: any[],
@@ -181,36 +182,49 @@ export const useUnifiedModelList = (
     }
 
     if (hfModel.modelFormat === ModelFormat.MLX) {
-      setModelDetailsLoading(true);
-      try {
-        const details = await huggingFaceService.getModelDetails(hfModel.id);
-        
-        if (!details.mlxFileGroup || details.mlxFileGroup.required.length === 0) {
-          showDialog('Error', 'Could not find required MLX files');
-          return;
-        }
+      const modelId = hfModel.id;
+      
+      const isAlreadyDownloaded = await ModelManager.isDownloaded(modelId);
+      if (isAlreadyDownloaded) {
+        showDialog('Already Downloaded', 'This MLX model is already in your collection.');
+        return;
+      }
 
-        const filesToDownload = details.mlxFileGroup.required.map(file => ({
-          filename: file.rfilename,
-          downloadUrl: file.url || '',
-          size: file.size || 0,
+      navigation.navigate('Downloads' as never);
+
+      try {
+        setDownloadProgress((prev: any) => ({
+          ...prev,
+          [modelId]: {
+            progress: 0,
+            bytesDownloaded: 0,
+            totalBytes: 0,
+            status: 'downloading',
+            downloadId: Date.now()
+          }
         }));
 
-        const totalSize = filesToDownload.reduce((sum, file) => sum + file.size, 0);
-
-        setPendingMLXDownload({
-          modelName: details.id,
-          fileCount: filesToDownload.length,
-          totalSize: totalSize,
-          details: details,
-          filesToDownload: filesToDownload
+        await ModelManager.download(modelId, (progress) => {
+          setDownloadProgress((prev: any) => ({
+            ...prev,
+            [modelId]: {
+              ...prev[modelId],
+              progress,
+              status: progress >= 1 ? 'completed' : 'downloading'
+            }
+          }));
         });
-        setShowMLXConfirmDialog(true);
+
+        showDialog('Success', `${modelId} downloaded successfully`);
+        modelDownloader.refresh();
       } catch (error) {
+        setDownloadProgress((prev: any) => {
+          const newProgress = { ...prev };
+          delete newProgress[modelId];
+          return newProgress;
+        });
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        showDialog('Error', `Failed to load model details: ${errorMessage}`);
-      } finally {
-        setModelDetailsLoading(false);
+        showDialog('Download Error', `Failed to download MLX model: ${errorMessage}`);
       }
       return;
     }

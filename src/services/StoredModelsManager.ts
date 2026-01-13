@@ -7,6 +7,7 @@ import { StoredModel } from './ModelDownloaderTypes';
 import { detectVisionCapabilities } from '../utils/multimodalHelpers';
 import { ModelType, ModelFormat } from '../types/models';
 import { mlxStorageManager } from './MLXStorageManager';
+import { ModelManager } from 'react-native-nitro-mlx';
 
 export class StoredModelsManager extends EventEmitter {
   private fileManager: FileManager;
@@ -168,25 +169,52 @@ export class StoredModelsManager extends EventEmitter {
         }
 
         console.log('scanning_mlx_models');
-        const mlxModels = await mlxStorageManager.listMLXModels();
-        console.log('mlx_models_found', mlxModels.length);
+        try {
+          const mlxModelIds = await ModelManager.getDownloadedModels();
+          console.log('mlx_models_found', mlxModelIds.length);
 
-        for (const mlx of mlxModels) {
-          models.push({
-            id: `${mlx.modelId}-${Date.now()}`,
-            name: mlx.modelId,
-            path: mlx.path,
-            size: mlx.size,
-            modified: mlx.modified,
-            isExternal: false,
-            downloaded: true,
-            modelType: ModelType.LLM,
-            modelFormat: ModelFormat.MLX,
-            isDirectory: true,
-            fileCount: mlx.fileCount,
-            capabilities: ['text'],
-            supportsMultimodal: false,
-          });
+          for (const modelId of mlxModelIds) {
+            try {
+              const modelPath = await ModelManager.getModelPath(modelId);
+              const dirInfo = await FileSystem.getInfoAsync(modelPath);
+              
+              let size = 0;
+              let fileCount = 0;
+              
+              if (dirInfo.exists && dirInfo.isDirectory) {
+                const files = await FileSystem.readDirectoryAsync(modelPath);
+                fileCount = files.length;
+                
+                for (const file of files) {
+                  const filePath = `${modelPath}/${file}`;
+                  const fileInfo = await FileSystem.getInfoAsync(filePath);
+                  if (fileInfo.exists && !fileInfo.isDirectory) {
+                    size += (fileInfo as any).size || 0;
+                  }
+                }
+              }
+
+              models.push({
+                id: `${modelId}-${Date.now()}`,
+                name: modelId,
+                path: modelPath,
+                size,
+                modified: new Date((dirInfo as any).modificationTime || Date.now()).toISOString(),
+                isExternal: false,
+                downloaded: true,
+                modelType: ModelType.LLM,
+                modelFormat: ModelFormat.MLX,
+                isDirectory: true,
+                fileCount,
+                capabilities: ['text'],
+                supportsMultimodal: false,
+              });
+            } catch (modelError) {
+              console.log('mlx_model_scan_error', modelId, modelError);
+            }
+          }
+        } catch (error) {
+          console.log('mlx_scan_error', error);
         }
 
         console.log('saving_to_storage', models.length);
@@ -253,6 +281,24 @@ export class StoredModelsManager extends EventEmitter {
 
   async deleteModel(path: string): Promise<void> {
     return this.lock(async () => {
+      const currentModels = await this.getStoredModels();
+      const modelToDelete = currentModels.find(m => m.path === path);
+      
+      if (modelToDelete && modelToDelete.modelFormat === ModelFormat.MLX) {
+        try {
+          const modelId = modelToDelete.name;
+          await ModelManager.deleteModel(modelId);
+          console.log('mlx_model_deleted', modelId);
+        } catch (error) {
+          console.log('mlx_delete_error', error);
+        }
+        
+        const updated = currentModels.filter(m => m.path !== path);
+        await this.saveModelsToStorage(updated);
+        this.emit('modelsChanged');
+        return;
+      }
+      
       const dir = path.substring(0, path.lastIndexOf('/'));
       const baseName = path.substring(path.lastIndexOf('/') + 1);
       const projectorName = baseName.replace('.gguf', '-mmproj-f16.gguf');
@@ -266,7 +312,6 @@ export class StoredModelsManager extends EventEmitter {
         hasProjector = false;
       }
       
-      const currentModels = await this.getStoredModels();
       let updated = currentModels.filter(m => m.path !== path);
       if (hasProjector) {
         updated = updated.filter(m => m.path !== projectorPath);
