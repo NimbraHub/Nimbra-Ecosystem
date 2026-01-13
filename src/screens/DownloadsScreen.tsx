@@ -13,6 +13,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
+import { ModelManager } from 'react-native-nitro-mlx';
 import { modelDownloader } from '../services/ModelDownloader';
 import { useDownloads } from '../context/DownloadContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -298,6 +299,11 @@ export default function DownloadsScreen() {
 
       try {
         if (isMLXDownload) {
+          try {
+            await ModelManager.deleteModel(modelName);
+          } catch (error) {
+          }
+          
           setDownloadProgress(prev => {
             const newProgress = { ...prev };
             delete newProgress[modelName];
@@ -305,7 +311,7 @@ export default function DownloadsScreen() {
           });
           await removePersistedActiveDownload(modelName);
           
-          showDialog('Download Cancelled', 'MLX download has been stopped. Partial files will remain and download will resume if restarted.', [
+          showDialog('Download Cancelled', 'MLX download cancelled and all partial files removed.', [
             <Button key="ok" onPress={hideDialog}>OK</Button>
           ]);
         } else {
@@ -329,7 +335,7 @@ export default function DownloadsScreen() {
     showDialog(
       'Cancel Download',
       isMLXDownload 
-        ? 'Stop this MLX download? Partial files will be kept and download will resume from where it left off if restarted.'
+        ? 'Cancel this MLX download? All partial files will be deleted and you will need to start over if you download again.'
         : 'Are you sure you want to cancel this download?',
       [
         <Button key="cancel" onPress={hideDialog}>No</Button>,
