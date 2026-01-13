@@ -61,6 +61,7 @@ export default function DownloadsScreen() {
   const buttonProcessingRef = useRef<Set<string>>(new Set());
   const appState = useRef(AppState.currentState);
   const insets = useSafeAreaInsets();
+  const [expandedDownloads, setExpandedDownloads] = useState<Set<string>>(new Set());
 
   const [dialogVisible, setDialogVisible] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
@@ -68,6 +69,18 @@ export default function DownloadsScreen() {
   const [dialogActions, setDialogActions] = useState<React.ReactNode[]>([]);
 
   const hideDialog = () => setDialogVisible(false);
+
+  const toggleExpand = (modelName: string) => {
+    setExpandedDownloads(prev => {
+      const next = new Set(prev);
+      if (next.has(modelName)) {
+        next.delete(modelName);
+      } else {
+        next.add(modelName);
+      }
+      return next;
+    });
+  };
 
   const showDialog = (title: string, message: string, actions: React.ReactNode[]) => {
     setDialogTitle(title);
@@ -272,6 +285,8 @@ export default function DownloadsScreen() {
   }, [downloadProgress]);
 
   const handleCancel = (modelName: string) => {
+    const isMLXDownload = modelName.includes('/') || modelName.includes('mlx-community');
+    
     const confirmCancellation = async () => {
       hideDialog();
 
@@ -282,13 +297,26 @@ export default function DownloadsScreen() {
       buttonProcessingRef.current.add(modelName);
 
       try {
-        await modelDownloader.cancelDownload(modelName);
-        setDownloadProgress(prev => {
-          const newProgress = { ...prev };
-          delete newProgress[modelName];
-          return newProgress;
-        });
-        await removePersistedActiveDownload(modelName);
+        if (isMLXDownload) {
+          setDownloadProgress(prev => {
+            const newProgress = { ...prev };
+            delete newProgress[modelName];
+            return newProgress;
+          });
+          await removePersistedActiveDownload(modelName);
+          
+          showDialog('Download Cancelled', 'MLX download has been stopped. Partial files will remain and download will resume if restarted.', [
+            <Button key="ok" onPress={hideDialog}>OK</Button>
+          ]);
+        } else {
+          await modelDownloader.cancelDownload(modelName);
+          setDownloadProgress(prev => {
+            const newProgress = { ...prev };
+            delete newProgress[modelName];
+            return newProgress;
+          });
+          await removePersistedActiveDownload(modelName);
+        }
       } catch (error) {
         showDialog('Error', 'Failed to cancel download', [
           <Button key="ok" onPress={hideDialog}>OK</Button>
@@ -300,7 +328,9 @@ export default function DownloadsScreen() {
 
     showDialog(
       'Cancel Download',
-      'Are you sure you want to cancel this download?',
+      isMLXDownload 
+        ? 'Stop this MLX download? Partial files will be kept and download will resume from where it left off if restarted.'
+        : 'Are you sure you want to cancel this download?',
       [
         <Button key="cancel" onPress={hideDialog}>No</Button>,
         <Button key="confirm" onPress={confirmCancellation}>Yes</Button>
@@ -308,36 +338,85 @@ export default function DownloadsScreen() {
     );
   };
 
-  const renderItem = ({ item }: { item: DownloadItem }) => (
-    <View style={[styles.downloadItem, { backgroundColor: themeColors.borderColor }]}>
-      <View style={styles.downloadHeader}>
-        <Text style={[styles.downloadName, { color: themeColors.text }]}>
-          {item.name}
-        </Text>
-        <View style={styles.downloadActions}>
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => handleCancel(item.name)}
-          >
-            <MaterialCommunityIcons name="close-circle" size={24} color={getThemeAwareColor('#ff4444', currentTheme)} />
-          </TouchableOpacity>
+  const renderItem = ({ item }: { item: DownloadItem }) => {
+    const isMLXDownload = item.name.includes('/') || item.name.includes('mlx-community');
+    const progressText = isMLXDownload && item.totalBytes === 1000000000
+      ? `${Math.floor(item.progress || 0)}%`
+      : `${Math.floor(item.progress || 0)}% • ${formatBytes(item.bytesDownloaded || 0)} / ${formatBytes(item.totalBytes || 0)}`;
+    
+    const downloadData = downloadProgress[item.name];
+    const hasMLXFiles = downloadData?.mlxFiles && downloadData.mlxFiles.length > 0;
+    const isExpanded = expandedDownloads.has(item.name);
+    
+    return (
+      <View style={[styles.downloadItem, { backgroundColor: themeColors.borderColor }]}>
+        <View style={styles.downloadHeader}>
+          <Text style={[styles.downloadName, { color: themeColors.text }]} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <View style={styles.downloadActions}>
+            {hasMLXFiles && (
+              <TouchableOpacity
+                style={styles.expandButton}
+                onPress={() => toggleExpand(item.name)}
+              >
+                <MaterialCommunityIcons 
+                  name={isExpanded ? 'chevron-up' : 'chevron-down'} 
+                  size={20} 
+                  color={themeColors.text} 
+                />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => handleCancel(item.name)}
+            >
+              <MaterialCommunityIcons name="close-circle" size={24} color={getThemeAwareColor('#ff4444', currentTheme)} />
+            </TouchableOpacity>
+          </View>
         </View>
+        
+        <Text style={[styles.downloadProgress, { color: themeColors.secondaryText }]}>
+          {progressText}
+        </Text>
+        
+        <View style={[styles.progressBar, { backgroundColor: themeColors.background }]}>
+          <View 
+            style={[
+              styles.progressFill, 
+              { width: `${item.progress}%`, backgroundColor: getThemeAwareColor('#4a0660', currentTheme) }
+            ]} 
+          />
+        </View>
+        
+        {isExpanded && hasMLXFiles && (
+          <View style={[styles.expandedContent, { borderTopColor: themeColors.background }]}>
+            <Text style={[styles.filesHeader, { color: themeColors.secondaryText }]}>
+              {downloadData.mlxFiles.length} files
+            </Text>
+            {downloadData.mlxFiles.map((file, index) => (
+              <View key={`${item.name}-${index}`} style={styles.fileRow}>
+                <View style={styles.fileRowContent}>
+                  <MaterialCommunityIcons
+                    name="file-document-outline"
+                    size={16}
+                    color={themeColors.secondaryText}
+                    style={styles.fileIcon}
+                  />
+                  <Text style={[styles.fileName, { color: themeColors.text }]} numberOfLines={1}>
+                    {file.filename}
+                  </Text>
+                </View>
+                <Text style={[styles.fileSize, { color: themeColors.secondaryText }]}>
+                  {formatBytes(file.size)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
-      
-      <Text style={[styles.downloadProgress, { color: themeColors.secondaryText }]}>
-        {`${Math.floor(item.progress || 0)}% • ${formatBytes(item.bytesDownloaded || 0)} / ${formatBytes(item.totalBytes || 0)}`}
-      </Text>
-      
-      <View style={[styles.progressBar, { backgroundColor: themeColors.background }]}>
-        <View 
-          style={[
-            styles.progressFill, 
-            { width: `${item.progress}%`, backgroundColor: getThemeAwareColor('#4a0660', currentTheme) }
-          ]} 
-        />
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: themeColors.background }}>
@@ -433,5 +512,42 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     padding: 4,
+  },
+  expandButton: {
+    padding: 4,
+    marginRight: 4,
+  },
+  expandedContent: {
+    borderTopWidth: 1,
+    marginTop: 12,
+    paddingTop: 12,
+  },
+  filesHeader: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  fileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  fileRowContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
+  },
+  fileIcon: {
+    marginRight: 8,
+  },
+  fileName: {
+    fontSize: 13,
+    flex: 1,
+  },
+  fileSize: {
+    fontSize: 12,
   },
 }); 

@@ -193,28 +193,50 @@ export const useUnifiedModelList = (
       navigation.navigate('Downloads' as never);
 
       try {
+        const downloadId = Date.now();
+        const estimatedSize = 1000000000;
+        
+        const details = await huggingFaceService.getModelDetails(modelId);
+        const mlxFiles = details.mlxFileGroup?.required.map(file => ({
+          filename: file.rfilename,
+          size: file.size
+        })) || [];
+        
         setDownloadProgress((prev: any) => ({
           ...prev,
           [modelId]: {
             progress: 0,
             bytesDownloaded: 0,
-            totalBytes: 0,
+            totalBytes: estimatedSize,
             status: 'downloading',
-            downloadId: Date.now()
+            downloadId,
+            mlxFiles
           }
         }));
 
         await ModelManager.download(modelId, (progress) => {
+          const progressPercent = progress * 100;
+          const bytesDownloaded = Math.floor(estimatedSize * progress);
+          
           setDownloadProgress((prev: any) => ({
             ...prev,
             [modelId]: {
               ...prev[modelId],
-              progress,
-              status: progress >= 1 ? 'completed' : 'downloading'
+              progress: progressPercent,
+              bytesDownloaded,
+              totalBytes: estimatedSize,
+              status: progress >= 1 ? 'completed' : 'downloading',
+              downloadId
             }
           }));
         });
 
+        setDownloadProgress((prev: any) => {
+          const newProgress = { ...prev };
+          delete newProgress[modelId];
+          return newProgress;
+        });
+        
         showDialog('Success', `${modelId} downloaded successfully`);
         modelDownloader.refresh();
       } catch (error) {
