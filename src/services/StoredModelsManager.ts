@@ -245,11 +245,35 @@ export class StoredModelsManager extends EventEmitter {
 
       const storedData = await AsyncStorage.getItem(this.STORAGE_KEY);
       const storedModels: StoredModel[] = storedData ? JSON.parse(storedData) : [];
+      const mlxInStorage = storedModels.filter(m => m.modelFormat === ModelFormat.MLX).length;
       
-      if (storedModels.length === 0) {
+      let needsRescan = storedModels.length === 0;
+      
+      if (!needsRescan && mlxInStorage === 0) {
+        try {
+          const mlxModelIds = await ModelManager.getDownloadedModels();
+          if (mlxModelIds.length > 0) {
+            needsRescan = true;
+          }
+        } catch (error) {
+          console.log('mlx_disk_check_error', error);
+        }
+      }
+      
+      if (needsRescan) {
         const filesOnDisk = await FileSystem.readDirectoryAsync(baseDir);
-        if (filesOnDisk.length > 0) {
-          console.log('sync_empty_storage_but_files_exist');
+        let hasModels = filesOnDisk.length > 0;
+        
+        if (!hasModels) {
+          try {
+            const mlxModelIds = await ModelManager.getDownloadedModels();
+            hasModels = mlxModelIds.length > 0;
+          } catch (error) {
+            console.log('mlx_check_error', error);
+          }
+        }
+        
+        if (hasModels) {
           await this.scanAndPersist();
           return;
         }

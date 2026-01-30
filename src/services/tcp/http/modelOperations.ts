@@ -215,8 +215,8 @@ export async function handlePsRequest(
   method: string,
   path: string,
   sendJSONResponse: (socket: any, status: number, payload: any) => void,
-  llamaManagerIsInitialized: () => boolean,
-  llamaManagerGetModelPath: () => string | null,
+  isModelReady: () => boolean,
+  getActiveModelPath: () => string | null,
   findStoredModel: (identifier: string, models: StoredModel[]) => StoredModel | null,
   getFileSize: (path: string | null) => Promise<number>,
   getActiveModel: () => { path: string; name: string; startedAt: string } | null
@@ -224,8 +224,8 @@ export async function handlePsRequest(
   try {
     const items: any[] = [];
 
-    if (llamaManagerIsInitialized()) {
-      const currentPath = llamaManagerGetModelPath();
+    if (isModelReady()) {
+      const currentPath = getActiveModelPath();
       const models = await modelDownloader.getStoredModels();
       const target = currentPath ? findStoredModel(currentPath, models) : null;
       const activeModel = getActiveModel();

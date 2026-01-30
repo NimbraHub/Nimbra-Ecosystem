@@ -1,5 +1,6 @@
 import { onlineModelService } from './OnlineModelService';
 import { llamaManager } from '../utils/LlamaManager';
+import { engineService } from './inference-engine-service';
 import chatManager from '../utils/ChatManager';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Dispatch, SetStateAction } from 'react';
@@ -112,10 +113,10 @@ export class ModelManagementService {
   static getModelInfo(activeProvider: ProviderType | null): ModelInfo {
     let modelName = 'Select a Model';
     let iconName: keyof typeof MaterialCommunityIcons.glyphMap = "cube-outline";
-    let currentModelPath = activeProvider === 'local' ? llamaManager.getModelPath() : activeProvider;
+    let currentModelPath = activeProvider === 'local' ? engineService.getActiveModelPath() : activeProvider;
     
     if (activeProvider === 'local') {
-      const modelPath = llamaManager.getModelPath();
+      const modelPath = engineService.getActiveModelPath();
       if (modelPath) {
         const modelFileName = modelPath.split('/').pop() || '';
         modelName = modelFileName.split('.')[0];
@@ -146,7 +147,7 @@ export class ModelManagementService {
     setActiveProvider: Dispatch<SetStateAction<ProviderType | null>>
   ) {
     const handleModelChange = () => {
-      const modelPath = llamaManager.getModelPath();
+      const modelPath = engineService.getActiveModelPath();
       if (modelPath) {
         setActiveProvider('local');
         chatManager.setCurrentProvider('local');

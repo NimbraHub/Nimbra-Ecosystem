@@ -48,9 +48,7 @@ type SettingsScreenProps = {
 };
 
 type ThemeOption = 'system' | 'light' | 'dark';
-type InferenceEngine = 'llama.cpp' | 'mediapipe' | 'mlc-llm' | 'mlx';
-
-const DEFAULT_INFERENCE_ENGINE: InferenceEngine = 'llama.cpp';
+type InferenceEngine = 'llama' | 'mlx';
 
 type ModelSettingKey = keyof StoredModelSettings;
 
@@ -83,8 +81,12 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
     llamaManager.getSettings()
   );
   const [error, setError] = useState<string | null>(null);
-  const [selectedInferenceEngine, setSelectedInferenceEngine] =
-    useState<InferenceEngine>(DEFAULT_INFERENCE_ENGINE);
+  const [activeInferenceEngine, setActiveInferenceEngine] =
+    useState<InferenceEngine>('llama');
+  const [engineEnabled, setEngineEnabled] = useState<Record<InferenceEngine, boolean>>({
+    llama: true,
+    mlx: true,
+  });
   
   const [dialogConfig, setDialogConfig] = useState<{
     visible: boolean;
@@ -248,13 +250,26 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
     getSystemInfo();
   }, []);
 
-  const engineToUi = (id: 'llama' | 'mlx'): InferenceEngine => (id === 'mlx' ? 'mlx' : 'llama.cpp');
-  const uiToEngine = (id: InferenceEngine): 'llama' | 'mlx' => (id === 'mlx' ? 'mlx' : 'llama');
-
   const loadInferenceEnginePreference = async () => {
     try {
-      const current = await engineService.load();
-      setSelectedInferenceEngine(engineToUi(current));
+      const { active, enabled } = await engineService.load();
+      const supportsMLX = Platform.OS === 'ios' && parseInt(String(Platform.Version), 10) >= 16;
+      const nextEnabled = {
+        llama: enabled.llama,
+        mlx: supportsMLX ? enabled.mlx : false,
+      };
+      setEngineEnabled(nextEnabled);
+
+      if (!supportsMLX && enabled.mlx) {
+        await engineService.setEnabled('mlx', false);
+      }
+
+      const fallback = nextEnabled.llama ? 'llama' : 'mlx';
+      const nextActive = nextEnabled[active] ? active : fallback;
+      if (nextActive !== active) {
+        await engineService.set(nextActive);
+      }
+      setActiveInferenceEngine(nextActive);
     } catch (error) {
     }
   };
@@ -267,12 +282,28 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
     }
   };
 
-  const handleInferenceEngineChange = async (engine: InferenceEngine) => {
+  const handleInferenceEngineToggle = async (engine: InferenceEngine, enabled: boolean) => {
+    const next = { ...engineEnabled, [engine]: enabled };
+    if (!next.llama && !next.mlx) {
+      showDialog('Engine Required', 'At least one inference engine must remain enabled.', [
+        <Button key="ok" onPress={hideDialog}>OK</Button>
+      ]);
+      return;
+    }
+
+    const previous = engineEnabled[engine];
+    setEngineEnabled(next);
+
     try {
-      await engineService.set(uiToEngine(engine));
-      setSelectedInferenceEngine(engine);
+      await engineService.setEnabled(engine, enabled);
+      if (!enabled && activeInferenceEngine === engine) {
+        const fallback = next.llama ? 'llama' : 'mlx';
+        await engineService.set(fallback);
+        setActiveInferenceEngine(fallback);
+      }
     } catch (error) {
-      showDialog('Error', 'Failed to save inference engine preference', [
+      setEngineEnabled(prev => ({ ...prev, [engine]: previous }));
+      showDialog('Error', 'Failed to update inference engine preference', [
         <Button key="ok" onPress={hideDialog}>OK</Button>
       ]);
     }
@@ -711,8 +742,9 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
           onMaxTokensPress={handleMaxTokensPress}
           onStopWordsPress={() => setShowStopWordsDialog(true)}
           onDialogOpen={handleOpenDialog}
-          selectedInferenceEngine={selectedInferenceEngine}
-          onInferenceEngineChange={handleInferenceEngineChange}
+          activeEngine={activeInferenceEngine}
+          engineEnabled={engineEnabled}
+          onEngineToggle={handleInferenceEngineToggle}
           onOpenSystemPromptDialog={() => setShowSystemPromptDialog(true)}
           onResetSystemPrompt={() => handleSettingsChange({ systemPrompt: DEFAULT_SETTINGS.systemPrompt })}
           enableRemoteModels={enableRemoteModels}

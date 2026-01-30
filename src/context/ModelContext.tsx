@@ -54,26 +54,20 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsModelLoading(true);
     
     try {
-      const engine = engineService.get();
       const pathLower = modelPath.toLowerCase();
       const isGguf = pathLower.endsWith('.gguf');
-      const isMLX = pathLower.includes('/huggingface/models/') || 
-                    pathLower.includes('mlx-community') || 
-                    pathLower.includes('mlx-');
+      const engine = engineService.getEngineForModel(modelPath);
+      const enabled = engineService.getEnabled();
 
-      if (engine === 'mlx' && isGguf) {
-        showSnackbar('MLX engine requires MLX format', 'error');
+      if (!enabled[engine]) {
+        showSnackbar(`${engine === 'llama' ? 'Llama.cpp' : 'MLX'} engine is disabled`, 'error');
         setIsModelLoading(false);
         return false;
       }
 
-      if (engine === 'llama' && isMLX) {
-        showSnackbar('Llama.cpp requires GGUF format', 'error');
-        setIsModelLoading(false);
-        return false;
-      }
+      const isMlxModel = engine === 'mlx';
 
-      if (!isMLX) {
+      if (!isMlxModel) {
         const fileInfo = await FileSystem.getInfoAsync(modelPath);
         if (!fileInfo.exists) {
           console.log('model_file_missing', modelPath);
@@ -92,13 +86,17 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       }
       
-      await engineService.mgr().init(modelPath, mmProjectorPath);
+      if (engine === 'mlx' && mmProjectorPath) {
+        mmProjectorPath = undefined;
+      }
+
+      await engineService.initModel(modelPath, mmProjectorPath);
       
       setSelectedModelPath(modelPath);
       updateProjectorState();
       
-      const modelName = isMLX ? modelPath : (modelPath.split('/').pop() || 'Model');
-      const engineLabel = engine === 'mlx' ? ' (MLX)' : '';
+      const modelName = isMlxModel ? modelPath : (modelPath.split('/').pop() || 'Model');
+      const engineLabel = engine === 'mlx' ? ' (MLX)' : ' (Llama.cpp)';
       const multimodalText = mmProjectorPath ? ' (Multimodal)' : '';
       showSnackbar(`${modelName}${engineLabel}${multimodalText} loaded successfully`);
 
@@ -124,7 +122,7 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const unloadModel = async (silent: boolean = false): Promise<void> => {
     try {
-      await engineService.mgr().release();
+      await engineService.release();
     } catch (error) {
       llamaManager.emergencyCleanup();
     } finally {

@@ -3,7 +3,7 @@ import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
-import { llamaManager } from '../../utils/LlamaManager';
+import { engineService } from '../../services/inference-engine-service';
 import path from 'path';
 import type { ProviderType } from '../../services/ModelManagementService';
 
@@ -24,7 +24,7 @@ const ModelSelectorButton: React.FC<ModelSelectorButtonProps> = ({
   const getModelInfo = () => {
     let modelName = 'Select a Model';
     let iconName: keyof typeof MaterialCommunityIcons.glyphMap = "cube-outline";
-    let currentModelPath = activeProvider === 'local' ? llamaManager.getModelPath() : activeProvider;
+    let currentModelPath = activeProvider === 'local' ? engineService.getActiveModelPath() : activeProvider;
     
     if (activeProvider === 'local') {
       if (currentModelPath) {

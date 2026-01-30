@@ -17,7 +17,6 @@ import { useRemoteModel } from '../context/RemoteModelContext';
 import { getThemeAwareColor } from '../utils/ColorUtils';
 import { onlineModelService } from '../services/OnlineModelService';
 import { engineService } from '../services/inference-engine-service';
-import { EngineId } from '../managers/inference-manager';
 import { Dialog, Portal, Text, Button } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -59,7 +58,6 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
 
     const [projectorSelectorVisible, setProjectorSelectorVisible] = useState(false);
     const [projectorModels, setProjectorModels] = useState<StoredModel[]>([]);
-  const [engine, setEngine] = useState<EngineId>('llama');
     const [selectedVisionModel, setSelectedVisionModel] = useState<Model | null>(null);
   const [appleFoundationEnabled, setAppleFoundationEnabled] = useState(false);
   const [appleFoundationAvailable, setAppleFoundationAvailable] = useState(false);
@@ -118,19 +116,10 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
         return !isProjectorModel;
       });
 
-      const filteredByEngine = completedModels.filter(model => {
-        const isMLX = isMLXModel(model);
-        if (engine === 'mlx') {
-          return isMLX;
-        } else {
-          return !isMLX;
-        }
-      });
-
       const sectionsData: SectionData[] = [];
       const localModels: Model[] = [];
 
-      if (Platform.OS === 'ios' && appleFoundationEnabled && appleFoundationAvailable && engine === 'llama') {
+      if (Platform.OS === 'ios' && appleFoundationEnabled && appleFoundationAvailable) {
         localModels.push({
           id: 'apple-foundation',
           name: 'Apple Foundation',
@@ -139,9 +128,11 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
         });
       }
 
-      const groupedModels = engine === 'mlx' ? groupMLXModels(filteredByEngine) : filteredByEngine;
+      const mlxModels = completedModels.filter(isMLXModel);
+      const ggufModels = completedModels.filter(model => !isMLXModel(model));
+      const groupedMlx = groupMLXModels(mlxModels);
 
-      localModels.push(...groupedModels);
+      localModels.push(...ggufModels, ...groupedMlx);
 
       if (localModels.length > 0) {
         sectionsData.push({ title: 'Local Models', data: localModels });
@@ -149,11 +140,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
 
       sectionsData.push({ title: 'Remote Models', data: ONLINE_MODELS });
       return sectionsData;
-    }, [models, appleFoundationEnabled, appleFoundationAvailable, engine]);
-
-    useEffect(() => {
-      engineService.load().then(setEngine).catch(() => {});
-    }, []);
+    }, [models, appleFoundationEnabled, appleFoundationAvailable]);
 
     useEffect(() => {
       if (sections.length > 0 && sections[0]?.data?.length > 0) {
@@ -256,19 +243,13 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
         const pathLower = modelPath.toLowerCase();
         const nameLower = (storedModel.name || '').toLowerCase();
 
-        if (engine === 'llama' && (pathLower.endsWith('.safetensors') || nameLower.endsWith('.safetensors'))) {
-          showDialog(
-            'Unsupported Model Format',
-            'safetensors models are not supported by llama.cpp. Switch to MLX engine in Settings to use this model.',
-            [<Button key="ok" onPress={hideDialog}>OK</Button>]
-          );
-          return;
-        }
+        const engine = engineService.getEngineForModel(modelPath);
+        const enabled = engineService.getEnabled();
 
-        if (engine === 'mlx' && pathLower.endsWith('.gguf')) {
+        if (!enabled[engine]) {
           showDialog(
-            'Unsupported Model Format',
-            'GGUF models are not supported by MLX engine. Switch to llama.cpp engine in Settings to use this model.',
+            'Engine Disabled',
+            `${engine === 'llama' ? 'Llama.cpp' : 'MLX'} is disabled. Enable it in Settings to load this model.`,
             [<Button key="ok" onPress={hideDialog}>OK</Button>]
           );
           return;
@@ -508,8 +489,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       isLocalModelsExpanded,
       toggleLocalModelsDropdown,
       refreshStoredModels,
-      isRefreshingLocalModels,
-      engine
+      isRefreshingLocalModels
     };
 
     useEffect(() => {
@@ -740,15 +720,13 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
                     ) : sections[0]?.data?.length === 0 ? (
                       <View style={styles.emptyContainer}>
                         <MaterialCommunityIcons 
-                          name={engine === 'mlx' ? "atom" : "memory"} 
+                          name="cube-outline" 
                           size={48} 
                           color={currentTheme === 'dark' ? '#fff' : themeColors.secondaryText} 
                         />
                         <Text style={[styles.emptyText, { color: currentTheme === 'dark' ? '#fff' : themeColors.text }]}>
-                          No {engine === 'mlx' ? 'MLX (safetensors)' : 'GGUF'} models found.{'\n'}
-                          {engine === 'mlx' 
-                            ? 'Download MLX models from Hugging Face or switch to llama.cpp engine.' 
-                            : 'Download GGUF models from Models tab or switch to MLX engine.'}
+                          No local models found.{'\n'}
+                          Download GGUF or MLX models from the Models tab.
                         </Text>
                       </View>
                     ) : null}

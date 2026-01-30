@@ -76,9 +76,7 @@ export function createModelApiHandler(context: Context): ApiHandler {
 
       if (action === 'unload') {
         try {
-          if (engineService.mgr().ready()) {
-            await engineService.mgr().release();
-          }
+          await engineService.release();
           context.respond(socket, 200, { status: 'unloaded' });
           logger.logWebRequest(method, path, 200);
         } catch (error) {
@@ -90,14 +88,18 @@ export function createModelApiHandler(context: Context): ApiHandler {
 
       if (action === 'reload') {
         try {
-          const current = llamaManager.getModelPath();
+          const current = engineService.getActiveModelPath();
           if (!current) {
             context.respond(socket, 503, { error: 'model_not_loaded' });
             logger.logWebRequest(method, path, 503);
             return true;
           }
 
-          await engineService.mgr().init(current, llamaManager.getMultimodalProjectorPath() ?? undefined);
+          const projectorPath = engineService.getEngineForModel(current) === 'llama'
+            ? llamaManager.getMultimodalProjectorPath() ?? undefined
+            : undefined;
+
+          await engineService.initModel(current, projectorPath);
           context.respond(socket, 200, { status: 'reloaded', path: current });
           logger.logWebRequest(method, path, 200);
         } catch (error) {

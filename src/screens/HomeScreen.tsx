@@ -303,13 +303,13 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
     
     console.log('mlx_homescreen_send_start', {
       messageLength: messageText.length,
-      modelPath: llamaManager.getModelPath(),
+      modelPath: engineService.getActiveModelPath(),
       activeProvider,
-      engine: engineService.engine
+      engine: engineService.get()
     });
 
-    if (!llamaManager.getModelPath() && !activeProvider) {
-      console.log('mlx_homescreen_no_model', { modelPath: llamaManager.getModelPath(), activeProvider });
+    if (!engineService.getActiveModelPath() && !activeProvider) {
+      console.log('mlx_homescreen_no_model', { modelPath: engineService.getActiveModelPath(), activeProvider });
       setShouldOpenModelSelector(true);
       return;
     }
@@ -571,7 +571,7 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
       chatId: currentChat.id,
       messageCount: currentChat.messages.length,
       activeProvider,
-      engine: engineService.engine
+      engine: engineService.get()
     });
 
     try {

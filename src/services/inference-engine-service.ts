@@ -4,30 +4,94 @@ import { llamaAdapter } from '../managers/llama-manager';
 import { mlxManager } from '../managers/mlx-manager';
 import { featureCaps, isFeatureOn } from './feature-availability';
 
-const key = 'inference_engine';
+const keyActive = 'inference_engine_active';
+const keyEnabled = 'inference_engine_enabled';
 
 class EngineService {
   private engine: EngineId = 'llama';
+  private enabled: Record<EngineId, boolean> = { llama: true, mlx: true };
+  private activeModelPath: string | null = null;
   private map: Record<EngineId, InferenceManager> = {
     llama: llamaAdapter,
     mlx: mlxManager,
   };
 
   async load() {
-    const stored = await AsyncStorage.getItem(key);
-    if (stored === 'mlx' || stored === 'llama') {
-      this.engine = stored;
+    const [storedActive, storedEnabled] = await Promise.all([
+      AsyncStorage.getItem(keyActive),
+      AsyncStorage.getItem(keyEnabled),
+    ]);
+
+    if (storedActive === 'mlx' || storedActive === 'llama') {
+      this.engine = storedActive;
     }
-    return this.engine;
+
+    if (storedEnabled) {
+      try {
+        const parsed = JSON.parse(storedEnabled) as Record<EngineId, boolean>;
+        this.enabled = {
+          llama: parsed.llama !== false,
+          mlx: parsed.mlx !== false,
+        };
+      } catch {
+      }
+    }
+
+    return { active: this.engine, enabled: { ...this.enabled } };
   }
 
   async set(engine: EngineId) {
     this.engine = engine;
-    await AsyncStorage.setItem(key, engine);
+    await AsyncStorage.setItem(keyActive, engine);
+  }
+
+  async setEnabled(engine: EngineId, value: boolean) {
+    this.enabled = { ...this.enabled, [engine]: value };
+    await AsyncStorage.setItem(keyEnabled, JSON.stringify(this.enabled));
   }
 
   get() {
     return this.engine;
+  }
+
+  getEnabled() {
+    return { ...this.enabled };
+  }
+
+  isEnabled(engine: EngineId) {
+    return Boolean(this.enabled[engine]);
+  }
+
+  getActiveModelPath() {
+    return this.activeModelPath;
+  }
+
+  getEngineForModel(modelPath: string): EngineId {
+    const lower = modelPath.toLowerCase();
+    return lower.endsWith('.gguf') ? 'llama' : 'mlx';
+  }
+
+  async initModel(modelPath: string, projectorPath?: string) {
+    const engine = this.getEngineForModel(modelPath);
+    if (!this.isEnabled(engine)) {
+      throw new Error('engine_disabled');
+    }
+
+    if (engine !== this.engine) {
+      if (this.map[this.engine].ready()) {
+        await this.map[this.engine].release();
+      }
+      this.activeModelPath = null;
+      await this.set(engine);
+    }
+
+    await this.map[this.engine].init(modelPath, projectorPath);
+    this.activeModelPath = modelPath;
+  }
+
+  async release() {
+    await this.map[this.engine].release();
+    this.activeModelPath = null;
   }
 
   mgr() {
@@ -47,7 +111,7 @@ class EngineService {
   }
 
   needsRestart() {
-    return true;
+    return false;
   }
 }
 

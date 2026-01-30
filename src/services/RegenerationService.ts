@@ -37,7 +37,7 @@ export class RegenerationService {
   ): Promise<void> {
     if (messages.length < 2) return;
     
-    const hasLocalModel = !!llamaManager.getModelPath();
+    const hasLocalModel = !!engineService.getActiveModelPath();
 
     let hasValidModel = false;
     let validProvider = activeProvider;

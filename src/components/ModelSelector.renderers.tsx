@@ -4,7 +4,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Text } from 'react-native-paper';
 import { getThemeAwareColor } from '../utils/ColorUtils';
 import { ThemeColors } from '../types/theme';
-import { EngineId } from '../managers/inference-manager';
 import {
   StoredModel,
   MLXGroup,
@@ -26,7 +25,6 @@ export interface RenderContext {
   isOnlineModelsExpanded: boolean;
   isLocalModelsExpanded: boolean;
   isRefreshingLocalModels: boolean;
-  engine: EngineId;
   enableRemoteModels: boolean;
   isLoggedIn: boolean;
   handleModelSelect: (model: Model) => void;

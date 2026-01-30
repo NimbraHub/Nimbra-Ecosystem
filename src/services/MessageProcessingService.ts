@@ -779,7 +779,7 @@ export class MessageProcessingService {
       console.log('mlx_direct_gen_start', {
         messageId,
         messageCount: baseMessages.length,
-        engine: engineService.engine,
+        engine: engineService.get(),
         engineReady: engineService.mgr().ready()
       });
       console.log('local_no_rag_messages', JSON.stringify(baseMessages.map(m => ({ 

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import chatManager from '../utils/ChatManager';
 import { llamaManager } from '../utils/LlamaManager';
+import { engineService } from './inference-engine-service';
 import { modelSettingsService } from './ModelSettingsService';
 import { usageTrackingService } from './UsageTrackingService';
 import { inAppReviewService } from './InAppReviewService';
@@ -14,7 +15,7 @@ export interface ChatLifecycleCallbacks {
 export class ChatLifecycleService {
   
   static async getEffectiveSettings(activeProvider: ProviderType | null) {
-    const rawModelPath = activeProvider === 'local' ? llamaManager.getModelPath() : null;
+    const rawModelPath = activeProvider === 'local' ? engineService.getActiveModelPath() : null;
     const currentModelPath = rawModelPath && !rawModelPath.startsWith('file://') 
       ? `file://${rawModelPath}` 
       : rawModelPath;

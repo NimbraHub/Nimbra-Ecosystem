@@ -432,7 +432,7 @@ class RAGServiceClass {
   }
 
   private async ensureEmbeddingSupport(): Promise<void> {
-    if (!engineService.mgr().ready()) {
+    if (!engineService.ready()) {
       throw new Error('Model not initialized');
     }
 
@@ -447,14 +447,18 @@ class RAGServiceClass {
       return;
     } catch (error) {
       console.log('rag_embeddings_failed', error instanceof Error ? error.message : 'unknown');
-      const modelPath = llamaManager.getModelPath();
+      const modelPath = engineService.getActiveModelPath();
       if (!modelPath) {
         throw error instanceof Error ? error : new Error('Unable to generate embeddings');
       }
 
+      if (engineService.getEngineForModel(modelPath) !== 'llama') {
+        throw error instanceof Error ? error : new Error('Embeddings not supported by current engine');
+      }
+
       console.log('rag_reload_model');
       const projectorPath = llamaManager.getMultimodalProjectorPath();
-      await engineService.mgr().init(modelPath, projectorPath ?? undefined);
+      await engineService.initModel(modelPath, projectorPath ?? undefined);
       try {
         const embedFn2 = engineService.mgr().embed;
         if (!embedFn2) {
