@@ -28,6 +28,7 @@ import { onlineModelService } from '../services/OnlineModelService';
 import { useModel } from '../context/ModelContext';
 import { Dialog, Portal, Button, Text as PaperText } from 'react-native-paper';
 import { useRemoteModel } from '../context/RemoteModelContext';
+import { engineService } from '../services/inference-engine-service';
 
 import { debounce, generateRandomId } from '../utils/homeScreenUtils';
 import { useDialog } from '../hooks/useDialog';
@@ -54,6 +55,8 @@ type HomeScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
   route: RouteProp<TabParamList, 'HomeTab'>;
 };
+
+const remoteProviders: ProviderType[] = ['gemini', 'chatgpt', 'deepseek', 'claude'];
 
 export default function HomeScreen({ route, navigation }: HomeScreenProps) {
   const { theme: currentTheme, selectedTheme } = useTheme();
@@ -224,6 +227,28 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
   }, [route.params?.modelPath, checkSystemMemory]);
 
   useEffect(() => {
+    if (activeProvider) return;
+
+    if (selectedModelPath === 'apple-foundation') {
+      setActiveProvider('apple-foundation');
+      chatManager.setCurrentProvider('apple-foundation');
+      return;
+    }
+
+    if (selectedModelPath && remoteProviders.includes(selectedModelPath as ProviderType)) {
+      setActiveProvider(selectedModelPath as ProviderType);
+      chatManager.setCurrentProvider(selectedModelPath as ProviderType);
+      return;
+    }
+
+    const modelPath = engineService.getActiveModelPath();
+    if (modelPath) {
+      setActiveProvider('local');
+      chatManager.setCurrentProvider('local');
+    }
+  }, [activeProvider, selectedModelPath]);
+
+  useEffect(() => {
     const handleLoadChat = async () => {
       const loadChatId = route.params?.loadChatId || (route.params as any)?.params?.loadChatId;
 
@@ -296,20 +321,32 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
   const handleSend = async (text: string) => {
     console.log('mlx_homescreen_handleSend_ENTERED', { text: text.substring(0, 50) });
     const messageText = text.trim();
+    console.log('mlx_homescreen_after_trim', { messageText, length: messageText.length });
     if (!messageText) {
       console.log('mlx_homescreen_empty_message');
       return;
+    }
+
+    const providerFromSelection = selectedModelPath === 'apple-foundation'
+      ? 'apple-foundation'
+      : selectedModelPath && remoteProviders.includes(selectedModelPath as ProviderType)
+        ? (selectedModelPath as ProviderType)
+        : null;
+    const effectiveProvider = activeProvider || providerFromSelection;
+    if (!activeProvider && providerFromSelection) {
+      setActiveProvider(providerFromSelection);
+      chatManager.setCurrentProvider(providerFromSelection);
     }
     
     console.log('mlx_homescreen_send_start', {
       messageLength: messageText.length,
       modelPath: engineService.getActiveModelPath(),
-      activeProvider,
+      activeProvider: effectiveProvider,
       engine: engineService.get()
     });
 
-    if (!engineService.getActiveModelPath() && !activeProvider) {
-      console.log('mlx_homescreen_no_model', { modelPath: engineService.getActiveModelPath(), activeProvider });
+    if (!engineService.getActiveModelPath() && !effectiveProvider) {
+      console.log('mlx_homescreen_no_model', { modelPath: engineService.getActiveModelPath(), activeProvider: effectiveProvider });
       setShouldOpenModelSelector(true);
       return;
     }
@@ -337,19 +374,31 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
         );
         return;
       }
+
+      const updatedChat = chatManager.getCurrentChat();
+      console.log('mlx_homescreen_updatedChat', { 
+        hasChat: !!updatedChat, 
+        messageCount: updatedChat?.messages.length,
+        lastMessage: updatedChat?.messages[updatedChat.messages.length - 1]
+      });
+      if (updatedChat) {
+        setMessages([...updatedChat.messages]);
+        console.log('mlx_homescreen_setMessages_called', { messageCount: updatedChat.messages.length });
+      }
       
       console.log('mlx_homescreen_message_added', { success });
       console.log('mlx_homescreen_process_start');
-      await processMessage();
+      await processMessage(effectiveProvider);
       console.log('mlx_homescreen_process_complete');
     } catch (error) {
-      console.log('mlx_homescreen_send_error', error instanceof Error ? error.message : 'unknown');
+      console.log('mlx_homescreen_send_error', { error, message: error instanceof Error ? error.message : 'unknown', stack: error instanceof Error ? error.stack : undefined });
       showDialog(
         'Error',
         'Failed to send message',
         [<Button key="ok" onPress={hideDialog}>OK</Button>]
       );
     } finally {
+      console.log('mlx_homescreen_finally_block');
       setIsLoading(false);
     }
   };
@@ -563,23 +612,26 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
     }
   };
 
-  const processMessage = async () => {
+  const processMessage = async (providerOverride?: ProviderType | null) => {
+    const provider = providerOverride ?? activeProvider;
     const currentChat = chatManager.getCurrentChat();
     if (!currentChat) return;
 
     console.log('mlx_process_message_start', {
       chatId: currentChat.id,
       messageCount: currentChat.messages.length,
-      activeProvider,
+      activeProvider: provider,
       engine: engineService.get()
     });
 
     try {
       await stopGenerationIfRunning();
-      const settings = await getEffectiveSettings();
+      const settings = providerOverride
+        ? await ChatLifecycleService.getEffectiveSettings(providerOverride)
+        : await getEffectiveSettings();
       
       console.log('mlx_process_calling_service', { 
-        activeProvider, 
+        activeProvider: provider, 
         settings: { 
           temperature: settings.temperature, 
           maxTokens: settings.maxTokens 
@@ -587,7 +639,7 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
       });
 
       await messageProcessingService.processMessage(
-        activeProvider,
+        provider,
         settings
       );
       console.log('mlx_process_message_complete');

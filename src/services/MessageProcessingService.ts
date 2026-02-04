@@ -62,7 +62,12 @@ export class MessageProcessingService {
       };
       
       await chatManager.addMessage(assistantMessage);
-      const lastMessage = chatManager.getCurrentChat()?.messages.slice(-1)[0];
+      const updatedChat = chatManager.getCurrentChat();
+      if (!updatedChat) return;
+
+      this.callbacks.setMessages([...updatedChat.messages]);
+
+      const lastMessage = updatedChat.messages.slice(-1)[0];
       if (!lastMessage) return;
       
       const messageId = lastMessage.id;
