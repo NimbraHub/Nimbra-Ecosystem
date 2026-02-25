@@ -308,20 +308,7 @@ export default function DownloadsScreen() {
     }
   };
 
-  useEffect(() => {
-    const saveDownloadProgress = async () => {
-      try {
-        if (Object.keys(downloadProgress).length > 0) {
-          await AsyncStorage.setItem('download_progress', JSON.stringify(downloadProgress));
-        } else {
-          await AsyncStorage.removeItem('download_progress');
-        }
-      } catch (error) {
-      }
-    };
 
-    saveDownloadProgress();
-  }, [downloadProgress]);
 
   const handleCancel = (modelName: string) => {
     const confirmCancellation = async () => {

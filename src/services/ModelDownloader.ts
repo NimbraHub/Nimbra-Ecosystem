@@ -273,6 +273,20 @@ class ModelDownloader extends EventEmitter {
     } catch (error) {
     }
   }
+
+  async getActiveDownloadsList(): Promise<Array<{ modelName: string; downloadId: number; progress: number; bytesDownloaded: number; totalBytes: number; status: string }>> {
+    if (!this.isInitialized) {
+      await this.initializationPromise;
+    }
+    return this.downloadTaskManager.getActiveDownloads().map(d => ({
+      modelName: d.modelName,
+      downloadId: d.downloadId,
+      progress: d.progress || 0,
+      bytesDownloaded: d.bytesDownloaded || 0,
+      totalBytes: d.totalBytes || 0,
+      status: d.status || 'downloading',
+    }));
+  }
 }
 
 export const modelDownloader = new ModelDownloader(); 
