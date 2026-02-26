@@ -100,6 +100,7 @@ export default function ChatView({
   
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
   const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
+  const [imgViewSize, setImgViewSize] = useState<{ width: number; height: number } | null>(null);
   const [mediaPermission, requestMediaPermission] = MediaLibrary.usePermissions();
 
   const openReportDialog = useCallback((messageContent: string, provider: string) => {
@@ -110,13 +111,35 @@ export default function ChatView({
   }, [navigation]);
 
   const openImageViewer = useCallback((imageUri: string) => {
+    setImgViewSize(null);
     setFullScreenImage(imageUri);
     setIsImageViewerVisible(true);
+    Image.getSize(
+      imageUri,
+      (width, height) => {
+        const vpWidth = Dimensions.get('window').width;
+        const vpHeight = Dimensions.get('window').height;
+        const scale = Math.min(1, vpWidth / width, vpHeight / height);
+        setImgViewSize({
+          width: Math.max(1, Math.round(width * scale)),
+          height: Math.max(1, Math.round(height * scale)),
+        });
+      },
+      () => {
+        const vpWidth = Dimensions.get('window').width;
+        const vpHeight = Dimensions.get('window').height;
+        setImgViewSize({
+          width: Math.round(vpWidth * 0.9),
+          height: Math.round(vpHeight * 0.8),
+        });
+      }
+    );
   }, []);
 
   const closeImageViewer = useCallback(() => {
     setIsImageViewerVisible(false);
     setFullScreenImage(null);
+    setImgViewSize(null);
   }, []);
 
   const saveImg = useCallback(async () => {
@@ -873,7 +896,12 @@ export default function ChatView({
             {fullScreenImage ? (
               <Image
                 source={{ uri: fullScreenImage }}
-                style={styles.fullScreenImage}
+                style={[
+                  styles.fullScreenImage,
+                  imgViewSize
+                    ? { width: imgViewSize.width, height: imgViewSize.height }
+                    : { width: Math.round(Dimensions.get('window').width * 0.9), height: Math.round(Dimensions.get('window').height * 0.8) }
+                ]}
                 resizeMode="contain"
               />
             ) : null}
@@ -1176,8 +1204,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   fullScreenImage: {
-    width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height,
+    maxWidth: '100%',
+    maxHeight: '100%',
   },
   statItem: {
     flexDirection: 'row',
