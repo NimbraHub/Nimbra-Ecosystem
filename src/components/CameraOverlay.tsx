@@ -54,6 +54,7 @@ export default function CameraOverlay({ visible, onClose, onPhotoTaken, useRag =
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState('');
   const [imgCompress, setImgCompress] = useState(0.6);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
   const cameraRef = useRef<CameraView>(null);
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme as 'light' | 'dark'];
@@ -229,6 +230,7 @@ export default function CameraOverlay({ visible, onClose, onPhotoTaken, useRag =
               contentContainerStyle={styles.scrollContainer}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
+              scrollEnabled={scrollEnabled}
             >
               <View style={[styles.promptDialog, { backgroundColor: themeColors.background }]}>
                 <Text style={[styles.promptTitle, { color: themeColors.text }]}>
@@ -285,6 +287,8 @@ export default function CameraOverlay({ visible, onClose, onPhotoTaken, useRag =
                     step={0.05}
                     value={imgCompress}
                     onValueChange={setImgCompress}
+                    onSlidingStart={() => setScrollEnabled(false)}
+                    onSlidingComplete={() => setScrollEnabled(true)}
                     disabled={isProcessing}
                     minimumTrackTintColor={getThemeAwareColor('#4a0660', currentTheme)}
                     thumbTintColor={getThemeAwareColor('#4a0660', currentTheme)}
