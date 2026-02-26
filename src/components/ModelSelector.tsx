@@ -76,8 +76,8 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       n_gpu_layers: 0,
     });
     const [showInitPanel, setShowInitPanel] = useState(false);
-    const screenHeight = Dimensions.get('window').height;
-    const slideAnim = useRef(new Animated.Value(screenHeight)).current;
+    const getScreenH = () => Dimensions.get('window').height;
+    const slideAnim = useRef(new Animated.Value(getScreenH())).current;
     const backdropAnim = useRef(new Animated.Value(0)).current;
     const [overlayActive, setOverlayActive] = useState(false);
     const modelSelectInFlightRef = useRef(false);
@@ -571,10 +571,12 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       if (modalVisible) {
         refreshAppleFoundationState();
         setOverlayActive(true);
+        slideAnim.setValue(getScreenH());
+        backdropAnim.setValue(0);
         Animated.parallel([
           Animated.timing(backdropAnim, {
             toValue: 1,
-            duration: 350,
+            duration: 220,
             easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
           }),
@@ -588,21 +590,17 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
           }),
         ]).start();
       } else {
-        Animated.parallel([
-          Animated.timing(backdropAnim, {
-            toValue: 0,
-            duration: 250,
-            easing: Easing.in(Easing.cubic),
-            useNativeDriver: true,
-          }),
-          Animated.timing(slideAnim, {
-            toValue: screenHeight,
-            duration: 250,
-            easing: Easing.in(Easing.cubic),
-            useNativeDriver: true,
-          }),
-        ]).start(({ finished }) => {
-          if (finished) setOverlayActive(false);
+        backdropAnim.setValue(1);
+        Animated.timing(slideAnim, {
+          toValue: getScreenH(),
+          duration: 160,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }).start(({ finished }) => {
+          if (finished) {
+            backdropAnim.setValue(0);
+            setOverlayActive(false);
+          }
         });
       }
     }, [modalVisible]);

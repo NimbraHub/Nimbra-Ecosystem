@@ -47,6 +47,8 @@ export const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
+    alignSelf: 'stretch',
+    marginBottom: 0,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
