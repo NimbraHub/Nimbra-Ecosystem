@@ -1,0 +1,9 @@
+{
+  "platforms": ["android"],
+  "android": {
+    "modules": [
+      "expo.modules.transfer.TransferExpoModule",
+      "expo.modules.transfer.DownloadNotificationModule"
+    ]
+  }
+}

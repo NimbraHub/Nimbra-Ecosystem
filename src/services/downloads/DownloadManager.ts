@@ -1,4 +1,5 @@
-import {NativeEventEmitter, NativeModules, Platform} from 'react-native';
+import {Platform} from 'react-native';
+import { requireNativeModule, EventEmitter as ExpoEventEmitter } from 'expo-modules-core';
 import * as FileSystem from 'expo-file-system';
 
 import {
@@ -12,13 +13,19 @@ import {
 import {StoredModel} from '../ModelDownloaderTypes';
 import {normalizePath, getFileName} from '../../utils/pathUtils';
 
-const {TransferModule} = NativeModules;
+let TransferModule: any;
+try {
+  TransferModule = requireNativeModule('TransferModule');
+} catch (_) {
+  TransferModule = null;
+}
 const LOG_TAG = 'BackgroundDownloadService';
 
 export class BackgroundDownloadService {
   private activeTransfers: DownloadMap;
   private eventCallbacks: DownloadEventCallbacks = {};
-  private nativeEventEmitter: NativeEventEmitter | null = null;
+  private expoEventEmitter: InstanceType<typeof ExpoEventEmitter> | null = null;
+  private eventSubscriptions: Array<{ remove(): void }> = [];
 
   constructor() {
     this.activeTransfers = new Map();
@@ -29,9 +36,10 @@ export class BackgroundDownloadService {
   }
 
   private setupAndroidEventHandlers() {
-    this.nativeEventEmitter = new NativeEventEmitter(TransferModule);
+    this.expoEventEmitter = new ExpoEventEmitter(TransferModule);
 
-    this.nativeEventEmitter.addListener('onTransferProgress', event => {
+    this.eventSubscriptions.push(
+      this.expoEventEmitter.addListener('onTransferProgress', (event: any) => {
       let derivedModelName = event.modelName || this.extractModelName(event.destination, event.url);
 
       let transfer = derivedModelName ? this.activeTransfers.get(derivedModelName) : undefined;
@@ -90,9 +98,10 @@ export class BackgroundDownloadService {
       transfer.lastUpdateTime = currentTimestamp;
 
       this.eventCallbacks.onProgress?.(derivedModelName, transfer.state.progress);
-    });
+    }));
 
-    this.nativeEventEmitter.addListener('onTransferComplete', event => {
+    this.eventSubscriptions.push(
+      this.expoEventEmitter.addListener('onTransferComplete', (event: any) => {
       const derivedModelName = event.modelName || this.extractModelName(event.destination, event.url);
 
       let transfer: DownloadJob | undefined = derivedModelName
@@ -129,9 +138,10 @@ export class BackgroundDownloadService {
 
       this.eventCallbacks.onComplete?.(modelName);
       this.activeTransfers.delete(modelName);
-    });
+    }));
 
-    this.nativeEventEmitter.addListener('onTransferError', event => {
+    this.eventSubscriptions.push(
+      this.expoEventEmitter.addListener('onTransferError', (event: any) => {
       const derivedModelName = event.modelName || this.extractModelName(event.destination, event.url);
 
       let transfer: DownloadJob | undefined = derivedModelName
@@ -158,9 +168,10 @@ export class BackgroundDownloadService {
       const error = new Error(event.error);
       this.eventCallbacks.onError?.(transfer.model.name, error);
       this.activeTransfers.delete(transfer.model.name);
-    });
+    }));
 
-    this.nativeEventEmitter.addListener('onTransferCancelled', event => {
+    this.eventSubscriptions.push(
+      this.expoEventEmitter.addListener('onTransferCancelled', (event: any) => {
       const derivedModelName = event.modelName || this.extractModelName(event.destination, event.url);
 
       let transfer: DownloadJob | undefined = derivedModelName
@@ -203,7 +214,7 @@ export class BackgroundDownloadService {
       this.activeTransfers.delete(transfer.model.name);
 
       this.eventCallbacks.onCancelled?.(transfer.model.name);
-    });
+    }));
   }
 
   private formatFileSize(bytes: number): string {
@@ -647,12 +658,8 @@ export class BackgroundDownloadService {
   shutdownService(): void {
     console.log(`${LOG_TAG}: service_shutdown`);
     
-    if (this.nativeEventEmitter) {
-      this.nativeEventEmitter.removeAllListeners('onTransferProgress');
-      this.nativeEventEmitter.removeAllListeners('onTransferComplete');
-      this.nativeEventEmitter.removeAllListeners('onTransferError');
-      this.nativeEventEmitter.removeAllListeners('onTransferCancelled');
-    }
+    this.eventSubscriptions.forEach(sub => sub.remove());
+    this.eventSubscriptions = [];
     
     this.activeTransfers.clear();
     this.eventCallbacks = {};

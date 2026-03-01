@@ -16,22 +16,15 @@ import com.facebook.soloader.SoLoader
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
 
-import com.inferra.transfer.TransferPackage
-import com.gorai.ragionare.notifications.DownloadNotificationPackage
-import com.gorai.ragionare.localserver.LocalServerPackage
-import com.gorai.ragionare.device.SystemCapabilitiesPackage
-
 class MainApplication : Application(), ReactApplication {
 
   override val reactNativeHost: ReactNativeHost = ReactNativeHostWrapper(
         this,
         object : DefaultReactNativeHost(this) {
           override fun getPackages(): List<ReactPackage> {
-            val packages = PackageList(this).packages.toMutableList()
-            packages.add(TransferPackage())
-            packages.add(DownloadNotificationPackage())
-            packages.add(LocalServerPackage())
-            packages.add(SystemCapabilitiesPackage())
+            val packages = PackageList(this).packages
+            // Packages that cannot be autolinked yet can be added manually here, for example:
+            // packages.add(MyReactNativePackage())
             return packages
           }
 
