@@ -66,10 +66,12 @@ export default function ChatHistoryScreen() {
   const handleSelectChat = async (chatId: string) => {
     try {
       await chatManager.flushPendingSaves();
-      
-      navigation.navigate('MainTabs', {
-        screen: 'HomeTab',
-        params: { loadChatId: chatId }
+      navigation.reset({
+        index: 0,
+        routes: [{
+          name: 'MainTabs',
+          params: { screen: 'HomeTab', params: { loadChatId: chatId } },
+        }],
       });
     } catch (error) {
       showDialog('Error', 'Failed to load selected chat', [
@@ -127,8 +129,9 @@ export default function ChatHistoryScreen() {
 
   const handleCreateNewChat = async () => {
     await chatManager.createNewChat();
-    navigation.navigate('MainTabs', {
-      screen: 'HomeTab',
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'MainTabs' }],
     });
   };
 
