@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -16,14 +16,19 @@ import chatManager, { Chat } from '../utils/ChatManager';
 import AppHeader from '../components/AppHeader';
 import { Dialog, Portal, Text, Button } from 'react-native-paper';
 
+const PAGE_SIZE = 15;
+
 export default function ChatHistoryScreen() {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme as 'light' | 'dark'];
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
+  const allChatsRef = useRef<Chat[]>([]);
   const [chats, setChats] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const pageRef = useRef(1);
 
   const [dialogVisible, setDialogVisible] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
@@ -54,14 +59,29 @@ export default function ChatHistoryScreen() {
   
   const loadChats = useCallback(async () => {
     try {
-      const allChats = chatManager.getAllChats();
-      setChats(allChats);
+      const all = chatManager.getAllChats();
+      allChatsRef.current = all;
+      pageRef.current = 1;
+      setChats(all.slice(0, PAGE_SIZE));
       setCurrentChatId(chatManager.getCurrentChatId());
     } catch (error) {
     } finally {
       setIsLoading(false);
     }
   }, []);
+
+  const loadMore = useCallback(() => {
+    const all = allChatsRef.current;
+    const nextPage = pageRef.current + 1;
+    const nextSlice = all.slice(0, nextPage * PAGE_SIZE);
+    if (nextSlice.length <= chats.length) return;
+    setIsLoadingMore(true);
+    setTimeout(() => {
+      pageRef.current = nextPage;
+      setChats(nextSlice);
+      setIsLoadingMore(false);
+    }, 300);
+  }, [chats.length]);
 
   const handleSelectChat = async (chatId: string) => {
     try {
@@ -211,6 +231,15 @@ export default function ChatHistoryScreen() {
             renderItem={renderItem}
             keyExtractor={item => item.id}
             contentContainerStyle={styles.listContent}
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.3}
+            ListFooterComponent={isLoadingMore ? (
+              <ActivityIndicator
+                size="small"
+                color={themeColors.headerBackground}
+                style={styles.footerLoader}
+              />
+            ) : null}
             ListEmptyComponent={() => (
               <View style={styles.emptyContainer}>
                 <Text style={[styles.emptyText, { color: themeColors.secondaryText }]}>
@@ -318,5 +347,8 @@ const styles = StyleSheet.create({
   },
   newChatIcon: {
     marginRight: 8,
+  },
+  footerLoader: {
+    paddingVertical: 16,
   },
 }); 
