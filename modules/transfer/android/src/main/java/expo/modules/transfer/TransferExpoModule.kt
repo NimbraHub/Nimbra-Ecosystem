@@ -105,7 +105,7 @@ class TransferExpoModule : Module() {
       WorkManager.getInstance(context).cancelAllWorkByTag(transferId)
       ongoingTransfers.remove(transferId)
       removeStoredTransfer(transferId)
-      null
+      true
     }
 
     AsyncFunction("getOngoingTransfers") {
