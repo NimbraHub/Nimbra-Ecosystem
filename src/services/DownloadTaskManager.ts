@@ -306,6 +306,7 @@ export class DownloadTaskManager extends EventEmitter {
     }
 
     const failures: unknown[] = [];
+    const cleanupModelIds = new Set<string>();
 
     for (const internalName of internalNames) {
       const downloadInfo = this.activeDownloads.get(internalName);
@@ -314,6 +315,10 @@ export class DownloadTaskManager extends EventEmitter {
       }
 
       const displayName = this.tempNameMap.get(internalName) ?? internalName;
+      const mappedPackageName = this.tempNameMap.get(internalName);
+      if (mappedPackageName) {
+        cleanupModelIds.add(mappedPackageName);
+      }
 
       try {
         await backgroundDownloadService.abortTransfer(internalName);
@@ -327,6 +332,12 @@ export class DownloadTaskManager extends EventEmitter {
               await this.fileManager.deleteFile(downloadInfo.destination);
             } catch (error) {
             }
+          }
+
+          try {
+            const modelTempPath = `${this.fileManager.getBaseDir()}/${internalName}`;
+            await this.fileManager.deleteFile(modelTempPath);
+          } catch (error) {
           }
 
           this.activeDownloads.delete(internalName);
@@ -347,6 +358,13 @@ export class DownloadTaskManager extends EventEmitter {
     }
 
     await this.saveDownloadProgress();
+
+    for (const modelId of cleanupModelIds) {
+      try {
+        await mlxStorageManager.cleanupFailedMLXDownload(modelId);
+      } catch {
+      }
+    }
 
     if (typeof identifier === 'string') {
       const hasRemainingAlias = Array.from(this.activeDownloads.keys()).some(
