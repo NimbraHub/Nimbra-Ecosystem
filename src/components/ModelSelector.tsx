@@ -79,6 +79,30 @@ const parseInit = (raw: string): InitOverrides => {
   }
 };
 
+const getDir = (path: string) => {
+  const normalized = path.replace(/\/+$|\/+$/g, '');
+  const idx = normalized.lastIndexOf('/');
+  return idx > 0 ? normalized.slice(0, idx) : '';
+};
+
+const getFile = (path: string) => {
+  const idx = path.lastIndexOf('/');
+  return idx >= 0 ? path.slice(idx + 1) : path;
+};
+
+const hasCompleteMlxPackage = (files: StoredModel[]) => {
+  const names = new Set(files.map(file => getFile(file.path).toLowerCase()));
+  const hasRequiredConfig =
+    names.has('config.json') &&
+    names.has('tokenizer.json') &&
+    names.has('tokenizer_config.json');
+  const hasWeights = files.some(file => {
+    const name = getFile(file.path).toLowerCase();
+    return name.endsWith('.safetensors') || name.endsWith('.npz');
+  });
+  return hasRequiredConfig && hasWeights;
+};
+
 const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorProps>(
   ({ isOpen, onClose, preselectedModelPath, isGenerating, onModelSelect, navigation: propNavigation }, ref) => {
     const { theme: currentTheme } = useTheme();
@@ -166,7 +190,46 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
     };
 
     const sections = useMemo(() => {
-      const completedModels = models.filter(model => {
+      const visibleModels = (() => {
+        const withoutTemp = models.filter(model => {
+          const lowerName = model.name.toLowerCase();
+          const lowerPath = model.path.toLowerCase();
+          return !lowerName.startsWith('temp_mlx_') && !lowerPath.includes('/temp_mlx_');
+        });
+
+        const mlxFiles = withoutTemp.filter(model => {
+          const lowerPath = model.path.toLowerCase();
+          return lowerPath.includes('/models/mlx/') || model.modelFormat === 'mlx';
+        });
+
+        const mlxByDir = mlxFiles.reduce<Record<string, StoredModel[]>>((acc, model) => {
+          const dir = getDir(model.path);
+          if (!dir) {
+            return acc;
+          }
+          if (!acc[dir]) {
+            acc[dir] = [];
+          }
+          acc[dir].push(model);
+          return acc;
+        }, {});
+
+        const incompleteDirs = new Set(
+          Object.entries(mlxByDir)
+            .filter(([, files]) => !hasCompleteMlxPackage(files))
+            .map(([dir]) => dir)
+        );
+
+        return withoutTemp.filter(model => {
+          const lowerPath = model.path.toLowerCase();
+          if (!lowerPath.includes('/models/mlx/')) {
+            return true;
+          }
+          return !incompleteDirs.has(getDir(model.path));
+        });
+      })();
+
+      const completedModels = visibleModels.filter(model => {
         const isProjectorModel = model.name.toLowerCase().includes('mmproj') ||
                                  model.name.toLowerCase().includes('.proj');
         return !isProjectorModel;
