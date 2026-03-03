@@ -43,6 +43,54 @@ export class StoredModelsManager extends EventEmitter {
     }
   }
 
+  private async findMlxDir(modelId: string): Promise<string | null> {
+    const nitroModelId = modelId.replace(/\//g, '_');
+    const candidates = [
+      mlxStorageManager.getMLXModelDirectory(modelId),
+      mlxStorageManager.getMLXModelDirectory(nitroModelId),
+      `${FileSystem.documentDirectory}huggingface/models/${nitroModelId}`,
+      `${FileSystem.documentDirectory}huggingface/models/${modelId}`,
+    ];
+
+    for (const candidate of candidates) {
+      try {
+        const info = await FileSystem.getInfoAsync(candidate);
+        if (info.exists && info.isDirectory) {
+          return candidate;
+        }
+      } catch {
+      }
+    }
+
+    return null;
+  }
+
+  private async getDirStats(dirPath: string): Promise<{ size: number; fileCount: number }> {
+    let size = 0;
+    let fileCount = 0;
+
+    const walk = async (currentPath: string): Promise<void> => {
+      const entries = await FileSystem.readDirectoryAsync(currentPath);
+      for (const entry of entries) {
+        const fullPath = `${currentPath}/${entry}`;
+        const info = await FileSystem.getInfoAsync(fullPath, { size: true });
+        if (!info.exists) {
+          continue;
+        }
+
+        if (info.isDirectory) {
+          await walk(fullPath);
+        } else {
+          fileCount += 1;
+          size += (info as any).size || 0;
+        }
+      }
+    };
+
+    await walk(dirPath);
+    return { size, fileCount };
+  }
+
   private async confirmFilesExist(models: StoredModel[]): Promise<StoredModel[]> {
     const result: StoredModel[] = [];
     for (const model of models) {
@@ -197,24 +245,19 @@ export class StoredModelsManager extends EventEmitter {
 
           for (const modelId of mlxModelIds) {
             try {
-              const modelPath = mlxStorageManager.getMLXModelDirectory(modelId);
-              const dirInfo = await FileSystem.getInfoAsync(modelPath);
-              
-              let size = 0;
-              let fileCount = 0;
-              
-              if (dirInfo.exists && dirInfo.isDirectory) {
-                const files = await FileSystem.readDirectoryAsync(modelPath);
-                fileCount = files.length;
-                
-                for (const file of files) {
-                  const filePath = `${modelPath}/${file}`;
-                  const fileInfo = await FileSystem.getInfoAsync(filePath);
-                  if (fileInfo.exists && !fileInfo.isDirectory) {
-                    size += (fileInfo as any).size || 0;
-                  }
-                }
+              const modelPath = await this.findMlxDir(modelId);
+              if (!modelPath) {
+                console.log('mlx_dir_missing', modelId);
+                continue;
               }
+
+              const dirInfo = await FileSystem.getInfoAsync(modelPath);
+              if (!dirInfo.exists || !dirInfo.isDirectory) {
+                console.log('mlx_dir_invalid', modelId);
+                continue;
+              }
+
+              const { size, fileCount } = await this.getDirStats(modelPath);
 
               models.push({
                 id: `${modelId}-${Date.now()}`,
