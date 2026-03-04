@@ -95,6 +95,40 @@ class ChatManager {
     return nonEmptyChats.sort((a, b) => b.timestamp - a.timestamp);
   }
 
+  getRootChats(): Chat[] {
+    return this.cache
+      .filter(chat => chat.messages.length > 0 && !chat.parentChatId)
+      .sort((a, b) => {
+        const aLatest = this.getLatestBranchTimestamp(a.id);
+        const bLatest = this.getLatestBranchTimestamp(b.id);
+        return bLatest - aLatest;
+      });
+  }
+
+  private getLatestBranchTimestamp(rootId: string): number {
+    const root = this.getChatById(rootId);
+    let latest = root?.timestamp ?? 0;
+    for (const c of this.cache) {
+      if (c.parentChatId === rootId && c.timestamp > latest) {
+        latest = c.timestamp;
+      }
+    }
+    return latest;
+  }
+
+  getLatestBranch(rootId: string): Chat | null {
+    const root = this.getChatById(rootId);
+    if (!root) return null;
+    const branches = this.cache.filter(c => c.parentChatId === rootId);
+    if (branches.length === 0) return root;
+    branches.sort((a, b) => b.timestamp - a.timestamp);
+    return branches[0].timestamp >= root.timestamp ? branches[0] : root;
+  }
+
+  getBranchCount(rootId: string): number {
+    return this.cache.filter(c => c.parentChatId === rootId).length;
+  }
+
   getCurrentChat(): Chat | null {
     if (!this.currentChatId) return null;
     return this.getChatById(this.currentChatId);

@@ -59,10 +59,10 @@ export default function ChatHistoryScreen() {
   
   const loadChats = useCallback(async () => {
     try {
-      const all = chatManager.getAllChats();
-      allChatsRef.current = all;
+      const roots = chatManager.getRootChats();
+      allChatsRef.current = roots;
       pageRef.current = 1;
-      setChats(all.slice(0, PAGE_SIZE));
+      setChats(roots.slice(0, PAGE_SIZE));
       setCurrentChatId(chatManager.getCurrentChatId());
     } catch (error) {
     } finally {
@@ -86,11 +86,13 @@ export default function ChatHistoryScreen() {
   const handleSelectChat = async (chatId: string) => {
     try {
       await chatManager.flushPendingSaves();
+      const latest = chatManager.getLatestBranch(chatId);
+      const targetId = latest?.id ?? chatId;
       navigation.reset({
         index: 0,
         routes: [{
           name: 'MainTabs',
-          params: { screen: 'HomeTab', params: { loadChatId: chatId } },
+          params: { screen: 'HomeTab', params: { loadChatId: targetId } },
         }],
       });
     } catch (error) {
@@ -175,11 +177,11 @@ export default function ChatHistoryScreen() {
           {new Date(item.timestamp).toLocaleDateString()} • 
           {item.messages.length} messages
         </Text>
-        {item.parentChatId ? (
+        {chatManager.getBranchCount(item.id) > 0 ? (
           <View style={styles.branchBadge}>
             <MaterialCommunityIcons name="source-branch" size={14} color={themeColors.secondaryText} />
             <Text style={[styles.branchBadgeText, { color: themeColors.secondaryText }]}>
-              Branch
+              {chatManager.getBranchCount(item.id)} {chatManager.getBranchCount(item.id) === 1 ? 'branch' : 'branches'}
             </Text>
           </View>
         ) : null}
