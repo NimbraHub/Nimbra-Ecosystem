@@ -66,6 +66,7 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
   const [isLoading, setIsLoading] = useState(false);
   const modelSelectorRef = useRef<ModelSelectorRef>(null);
   const [shouldOpenModelSelector, setShouldOpenModelSelector] = useState(false);
+  const closeModelSelector = useCallback(() => setShouldOpenModelSelector(false), []);
   const [preselectedModelPath, setPreselectedModelPath] = useState<string | null>(null);
   const [onlineModelProvider, setOnlineModelProvider] = useState<string | null>(null);
   const appStateRef = useRef(AppState.currentState);
@@ -681,7 +682,7 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
     }
   };
 
-  const handleModelSelect = async (model: ProviderType, modelPath?: string, projectorPath?: string) => {
+  const handleModelSelect = useCallback(async (model: ProviderType, modelPath?: string, projectorPath?: string) => {
     await ModelManagementService.handleModelSelect(
       {
         model,
@@ -700,7 +701,7 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
       hideDialog,
       navigation
     );
-  };
+  }, [isLoading, isRegenerating, enableRemoteModels, isLoggedIn, loadModel, unloadModel, showDialog, hideDialog, navigation]);
 
   useEffect(() => {
     const cleanup = ModelManagementService.setupModelChangeListeners(
@@ -751,7 +752,7 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
          <ModelSelectorComponent
             modelSelectorRef={modelSelectorRef}
             shouldOpenModelSelector={shouldOpenModelSelector}
-            onClose={() => setShouldOpenModelSelector(false)}
+            onClose={closeModelSelector}
             activeProvider={activeProvider}
             isLoading={isLoading || false}
             isRegenerating={isRegenerating || false}
@@ -810,19 +811,21 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
         onClose={handleMemoryWarningClose}
       />
 
-      <Portal>
-        <Dialog visible={dialogVisible} onDismiss={hideDialog}>
-          <Dialog.Title>{dialogTitle}</Dialog.Title>
-          <Dialog.Content>
-            <PaperText>{dialogMessage}</PaperText>
-          </Dialog.Content>
-          <Dialog.Actions>
-            {dialogActions.map((ActionComponent, index) =>
-              React.isValidElement(ActionComponent) ? React.cloneElement(ActionComponent, { key: index }) : null
-            )}
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      {dialogVisible && (
+        <Portal>
+          <Dialog visible={dialogVisible} onDismiss={hideDialog}>
+            <Dialog.Title>{dialogTitle}</Dialog.Title>
+            <Dialog.Content>
+              <PaperText>{dialogMessage}</PaperText>
+            </Dialog.Content>
+            <Dialog.Actions>
+              {dialogActions.map((ActionComponent, index) =>
+                React.isValidElement(ActionComponent) ? React.cloneElement(ActionComponent, { key: index }) : null
+              )}
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
+      )}
     </SafeAreaView>
   );
 }

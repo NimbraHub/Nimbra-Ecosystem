@@ -926,10 +926,12 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
           </View>
         </TouchableOpacity>
 
+        {(overlayActive || dialogVisible || projectorSelectorVisible) && (
         <Portal>
+          {overlayActive && (
           <View
             style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-            pointerEvents={overlayActive ? 'auto' : 'none'}
+            pointerEvents="auto"
           >
             <Animated.View
               style={[styles.modalOverlay, { opacity: backdropAnim }]}
@@ -1123,7 +1125,9 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
               </Animated.View>
             </Animated.View>
           </View>
+          )}
 
+          {dialogVisible && (
           <Dialog visible={dialogVisible} onDismiss={hideDialog}>
             <Dialog.Title>{dialogTitle}</Dialog.Title>
             <Dialog.Content>
@@ -1133,7 +1137,9 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
               {dialogActions}
             </Dialog.Actions>
           </Dialog>
+          )}
 
+          {projectorSelectorVisible && (
           <Dialog visible={projectorSelectorVisible} onDismiss={handleProjectorSelectorClose}>
             <Dialog.Title>Select Multimodal Projector</Dialog.Title>
             <Dialog.Content>
@@ -1193,7 +1199,9 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
               <Button onPress={handleProjectorSelectorClose}>Cancel</Button>
             </Dialog.Actions>
           </Dialog>
+          )}
         </Portal>
+        )}
       </>
     );
   }
