@@ -12,6 +12,8 @@ export type RootStackParamList = {
     params?: {
       modelPath?: string;
       loadChatId?: string;
+      autoEnableRemoteModels?: boolean;
+      openRemoteTab?: boolean;
     };
   };
   Home: undefined;
@@ -39,7 +41,12 @@ export type TabParamList = {
     loadChatId?: string;
   };
   SettingsTab: undefined;
-  ModelTab: undefined;
+  ModelTab:
+    | {
+        autoEnableRemoteModels?: boolean;
+        openRemoteTab?: boolean;
+      }
+    | undefined;
   LocalServerTab: undefined;
   NotificationsTab: undefined;
   SearchTab: undefined;
