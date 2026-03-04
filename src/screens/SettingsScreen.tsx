@@ -559,6 +559,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
 
   const clearAllModels = async () => {
     const modelsDir = `${FileSystem.documentDirectory}models`;
+    const hfDir = `${FileSystem.documentDirectory}huggingface`;
 
     showDialog(
       '',
@@ -568,12 +569,16 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
     );
 
     try {
-      const modelsSize = await getDirectorySize(modelsDir);
-      const modelsSizeText = formatBytes(modelsSize);
+      const [modelsSize, hfSize] = await Promise.all([
+        getDirectorySize(modelsDir),
+        getDirectorySize(hfDir),
+      ]);
+      const totalSize = modelsSize + hfSize;
+      const totalSizeText = formatBytes(totalSize);
 
       showDialog(
         'Clear All Models',
-        `Are you sure you want to delete all models? This action cannot be undone.\n\nStorage to be freed: ${modelsSizeText}`,
+        `Are you sure you want to delete all models? This action cannot be undone.\n\nStorage to be freed: ${totalSizeText}`,
         [
           <Button key="cancel" onPress={hideDialog}>Cancel</Button>,
           <Button
@@ -582,7 +587,6 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
               hideDialog();
               try {
                 setClearingType('models');
-                await clearDirectory(modelsDir);
                 await modelDownloader.clearAllModels();
                 await modelSettingsService.clearAllSettings();
                 await loadStorageInfo();

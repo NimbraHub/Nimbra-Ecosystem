@@ -479,10 +479,54 @@ export class StoredModelsManager extends EventEmitter {
 
   async clearAllModels(): Promise<void> {
     try {
-      const emptyModels: StoredModel[] = [];
-      await this.saveModelsToStorage(emptyModels);
+      const models = await this.getStoredModels();
+
+      /*
+        Unregister each MLX model from the nitro registry
+        so stale entries don't linger after file deletion.
+      */
+      for (const m of models) {
+        if (m.modelFormat === ModelFormat.MLX) {
+          try {
+            await ModelManager.deleteModel(m.name);
+          } catch {
+            console.log('mlx_registry_delete_skip', m.name);
+          }
+        }
+      }
+
+      const baseDir = this.fileManager.getBaseDir();
+      const hfDir = `${FileSystem.documentDirectory}huggingface`;
+
+      /*
+        Delete the main models directory, the huggingface
+        directory, and any stray temp / export residue that
+        may consume storage.
+      */
+      const dirsToRemove = [
+        baseDir,
+        hfDir,
+        `${FileSystem.documentDirectory}temp`,
+        `${FileSystem.cacheDirectory}export`,
+      ];
+
+      for (const dir of dirsToRemove) {
+        try {
+          const info = await FileSystem.getInfoAsync(dir);
+          if (info.exists) {
+            await FileSystem.deleteAsync(dir, { idempotent: true });
+            console.log('dir_deleted', dir);
+          }
+        } catch {
+          console.log('dir_delete_skip', dir);
+        }
+      }
+
+      await FileSystem.makeDirectoryAsync(baseDir, { intermediates: true });
+
+      await this.saveModelsToStorage([]);
       this.emit('modelsChanged');
-      console.log('all_models_cleared_from_storage');
+      console.log('all_models_cleared');
     } catch (error) {
       console.log('clear_all_models_error', error);
       throw error;
