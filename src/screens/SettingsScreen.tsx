@@ -27,6 +27,7 @@ import ModelSettingsSection, { type GpuConfig } from '../components/settings/Mod
 import SystemInfoSection from '../components/settings/SystemInfoSection';
 import StorageSection from '../components/settings/StorageSection';
 import { Dialog, Portal, PaperProvider, Button, Text as PaperText, ActivityIndicator as PaperActivityIndicator } from 'react-native-paper';
+import * as WebBrowser from 'expo-web-browser';
 import { DEFAULT_SETTINGS } from '../config/llamaConfig';
 import type { ModelSettings as StoredModelSettings } from '../services/ModelSettingsService';
 import { modelSettingsService } from '../services/ModelSettingsService';
@@ -63,6 +64,8 @@ type DialogSettingConfig = {
   description: string;
   onSave?: (value: number) => Promise<void> | void;
 };
+
+const PRIVACY_POLICY_URL = 'https://inferrlm.app/privacy-policy';
 
 export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   const { theme: currentTheme, selectedTheme, toggleTheme } = useTheme();
@@ -365,8 +368,18 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
     }
   };
 
-  const openLink = (url: string) => {
-    Linking.openURL(url);
+  const openLink = async (url: string) => {
+    try {
+      if (url === PRIVACY_POLICY_URL) {
+        await WebBrowser.openBrowserAsync(url);
+        return;
+      }
+      await Linking.openURL(url);
+    } catch (error) {
+      showDialog('Error', 'Failed to open link', [
+        <Button key="ok" onPress={hideDialog}>OK</Button>,
+      ]);
+    }
   };
 
   const handleOpenDialog = (config: DialogSettingConfig) => {
