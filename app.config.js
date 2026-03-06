@@ -59,6 +59,7 @@ export default {
     },
     android: {
       versionCode: 281,
+      predictiveBackGestureEnabled: false,
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#660880"
