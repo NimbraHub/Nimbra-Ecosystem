@@ -241,17 +241,14 @@ export class RegenerationService {
 
     try {
       await onlineModelService.sendMessage(validProvider, messageParams, apiParams, streamCallback);
-    } catch (error) {
-      throw error;
-    }
-      
+
       if (!this.cancelGenerationRef.current) {
         let finalAvgTokenTime = undefined;
         if (firstTokenTime !== null && tokenCount > 0) {
           const timeAfterFirstToken = Date.now() - (startTime + firstTokenTime);
           finalAvgTokenTime = timeAfterFirstToken / tokenCount;
         }
-        
+
         const finalMessage: ChatMessage = {
           ...assistantMessage,
           content: fullResponse,
@@ -262,7 +259,7 @@ export class RegenerationService {
             avgTokenTime: finalAvgTokenTime && finalAvgTokenTime > 0 ? finalAvgTokenTime : undefined
           }
         };
-        
+
         const finalMessages = [...newMessages, finalMessage];
         this.callbacks.setMessages(finalMessages);
         await this.callbacks.saveMessagesImmediate(finalMessages);
