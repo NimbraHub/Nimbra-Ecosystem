@@ -32,7 +32,7 @@ interface OnlineModelServiceEvents {
   'api-key-updated': (provider: string) => void;
 }
 
-class OnlineModelService {
+export class OnlineModelService {
   private events = new EventEmitter<OnlineModelServiceEvents>();
   private _geminiServiceGetter: () => GeminiService | null = () => null;
   private _openAIServiceGetter: () => OpenAIService | null = () => null;

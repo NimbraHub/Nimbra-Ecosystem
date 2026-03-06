@@ -1,4 +1,4 @@
-import { onlineModelService } from './OnlineModelService';
+import { onlineModelService, OnlineModelService } from './OnlineModelService';
 import { llamaManager } from '../utils/LlamaManager';
 import { engineService } from './inference-engine-service';
 import chatManager from '../utils/ChatManager';
@@ -23,7 +23,7 @@ export interface ModelInfo {
   currentModelPath: string | null;
 }
 
-export type ProviderType = 'local' | 'gemini' | 'chatgpt' | 'deepseek' | 'claude' | 'apple-foundation';
+export type ProviderType = 'local' | 'gemini' | 'chatgpt' | 'deepseek' | 'claude' | 'apple-foundation' | string;
 
 export class ModelManagementService {
   
@@ -101,7 +101,7 @@ export class ModelManagementService {
         setActiveProvider('gemini');
         setSelectedModelPath('gemini');
         chatManager.setCurrentProvider('gemini');
-      } else if (model === 'chatgpt' || model === 'deepseek' || model === 'claude') {
+      } else if (model === 'chatgpt' || model === 'deepseek' || model === 'claude' || OnlineModelService.isClone(model)) {
         await unloadModel(true);
         setActiveProvider(model);
         setSelectedModelPath(model);
@@ -137,6 +137,12 @@ export class ModelManagementService {
     } else if (activeProvider === 'apple-foundation') {
       modelName = 'Apple Foundation';
       iconName = "apple";
+    } else if (activeProvider && OnlineModelService.isClone(activeProvider)) {
+      const base = OnlineModelService.getBaseProvider(activeProvider);
+      const baseName = base.charAt(0).toUpperCase() + base.slice(1);
+      modelName = `${baseName} (clone)`;
+      iconName = "cloud";
+      currentModelPath = activeProvider;
     }
 
     return { name: modelName, iconName, currentModelPath };
