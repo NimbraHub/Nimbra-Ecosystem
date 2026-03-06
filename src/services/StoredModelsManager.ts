@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import { fs as FileSystem } from './fs';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { EventEmitter } from './EventEmitter';

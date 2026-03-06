@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import { fs as FileSystem } from './fs';
 import { ModelFormat } from '../types/models';
 
 class MLXStorageManager {
