@@ -10,6 +10,7 @@ export type ChatMessage = {
   id: string;
   content: string;
   role: 'user' | 'assistant' | 'system';
+  modelName?: string;
   thinking?: string;
   stats?: {
     duration: number;
@@ -704,6 +705,9 @@ class ChatManager {
       const id = typeof entry.id === 'string' && entry.id.length > 0 ? entry.id : generateRandomId();
       const role: ChatMessage['role'] = entry.role === 'assistant' || entry.role === 'system' ? entry.role : 'user';
       const content = typeof entry.content === 'string' ? entry.content : String(entry.content ?? '');
+      const modelName = typeof entry.modelName === 'string' && entry.modelName.trim().length > 0
+        ? entry.modelName.trim()
+        : undefined;
       const thinking = typeof entry.thinking === 'string' ? entry.thinking : undefined;
 
       let stats: ChatMessage['stats'] | undefined;
@@ -723,6 +727,7 @@ class ChatManager {
         id,
         role,
         content,
+        modelName,
         thinking,
         stats,
       };
@@ -746,6 +751,7 @@ class ChatManager {
       thinking?: string | null;
       stats?: ChatMessage['stats'] | null;
       role?: ChatMessage['role'];
+      modelName?: string | null;
     }
   ): Promise<boolean> {
     try {
@@ -767,6 +773,10 @@ class ChatManager {
 
       if (updates.role && (updates.role === 'user' || updates.role === 'assistant' || updates.role === 'system')) {
         message.role = updates.role;
+      }
+
+      if (updates.modelName !== undefined) {
+        message.modelName = updates.modelName === null ? undefined : updates.modelName;
       }
 
       if (updates.stats !== undefined) {

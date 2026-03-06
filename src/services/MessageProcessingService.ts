@@ -61,10 +61,15 @@ export class MessageProcessingService {
           ? currentMessages
           : [{ role: 'system', content: systemPrompt, id: 'system-prompt' }, ...currentMessages];
       const skipRag = this.shouldSkipRag(processedMessages) || await this.shouldSkipRagForInput(processedMessages);
+      const responderModelName = await this.resolveResponderModelName(activeProvider);
+      if (responderModelName) {
+        console.log('resp_model', responderModelName);
+      }
       
       const assistantMessage: Omit<ChatMessage, 'id'> = {
         role: 'assistant',
         content: '',
+        modelName: responderModelName,
         stats: {
           duration: 0,
           tokens: 0,
@@ -787,6 +792,38 @@ export class MessageProcessingService {
       case 'claude': return 'Claude';
       default: return 'OpenAI';
     }
+  }
+
+  private async resolveResponderModelName(activeProvider: ProviderType | null): Promise<string | undefined> {
+    if (!activeProvider || activeProvider === 'local') {
+      const activePath = engineService.getActiveModelPath();
+      if (!activePath) {
+        return undefined;
+      }
+      return this.getLocalModelName(activePath);
+    }
+
+    if (activeProvider === 'apple-foundation') {
+      return 'Apple Foundation';
+    }
+
+    const configured = await onlineModelService.getModelName(activeProvider);
+    if (configured && configured.trim()) {
+      return configured.trim();
+    }
+
+    const fallback = onlineModelService.getDefaultModelName(activeProvider);
+    if (fallback && fallback.trim()) {
+      return fallback.trim();
+    }
+
+    const base = OnlineModelService.getBaseProvider(activeProvider);
+    return base || undefined;
+  }
+
+  private getLocalModelName(path: string): string {
+    const file = path.split('/').pop() || path;
+    return file.replace(/\.(gguf|mlx)$/i, '');
   }
 
   private shouldSkipRag(messages: Array<{ role: string; content: string }>): boolean {
