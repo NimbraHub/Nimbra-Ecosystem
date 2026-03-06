@@ -242,7 +242,7 @@ public class TransferModule: Module {
     UserDefaults.standard.set(data, forKey: Self.storeKey)
   }
 
-  func getMeta(_ tid: String) -> TransferMeta? {
+  private func getMeta(_ tid: String) -> TransferMeta? {
     metaLock.lock()
     defer { metaLock.unlock() }
     return meta[tid]
