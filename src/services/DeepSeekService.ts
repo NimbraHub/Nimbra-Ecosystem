@@ -57,7 +57,8 @@ export class DeepSeekService {
   async generateResponse(
     messages: ChatMessage[],
     options: DeepSeekRequestOptions = {},
-    onToken?: (token: string) => boolean | void
+    onToken?: (token: string) => boolean | void,
+    provider = 'deepseek'
   ): Promise<{
     fullResponse: string;
     tokenCount: number;
@@ -68,7 +69,7 @@ export class DeepSeekService {
     let fullResponse = '';
 
     try {
-      const apiKey = await this.apiKeyProvider('deepseek');
+      const apiKey = await this.apiKeyProvider(provider);
       if (!apiKey) {
         throw new Error('DeepSeek API key not found. Please set it in Settings.');
       }
@@ -80,7 +81,7 @@ export class DeepSeekService {
 
       const formattedMessages = messages.map(msg => this.parseMessageContent(msg));
 
-  const baseUrl = await this.baseUrlProvider('deepseek');
+  const baseUrl = await this.baseUrlProvider(provider);
   const url = `${baseUrl}/chat/completions`;
       
       const requestBody = {
