@@ -123,6 +123,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       deepseek: false,
       claude: false
     });
+    const [cloneModels, setCloneModels] = useState<OnlineModel[]>([]);
     const [isOnlineModelsExpanded, setIsOnlineModelsExpanded] = useState(false);
     const [isLocalModelsExpanded, setIsLocalModelsExpanded] = useState(true);
 
@@ -262,9 +263,9 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
         sectionsData.push({ title: 'Local Models', data: localModels });
       }
 
-      sectionsData.push({ title: 'Remote Models', data: ONLINE_MODELS });
+      sectionsData.push({ title: 'Remote Models', data: [...ONLINE_MODELS, ...cloneModels] });
       return sectionsData;
-    }, [models, appleFoundationEnabled, appleFoundationAvailable]);
+    }, [models, appleFoundationEnabled, appleFoundationAvailable, cloneModels]);
 
     useEffect(() => {
       if (sections.length > 0 && sections[0]?.data?.length > 0) {
@@ -286,7 +287,24 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
 
     useEffect(() => {
       checkOnlineModelApiKeys();
+      loadCloneModels();
     }, []);
+
+    const loadCloneModels = async () => {
+      try {
+        const clones = await onlineModelService.listClones();
+        const models = clones.map(c => ({
+          id: c.id,
+          name: c.displayName,
+          provider: c.baseProvider,
+          isOnline: true as const,
+        }));
+        setCloneModels(models);
+        return clones;
+      } catch (error) {
+        return [];
+      }
+    };
 
     const checkOnlineModelApiKeys = async () => {
       try {
@@ -294,12 +312,19 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
         const hasOpenAIKey = await onlineModelService.hasApiKey('chatgpt');
         const hasDeepSeekKey = await onlineModelService.hasApiKey('deepseek');
         const hasClaudeKey = await onlineModelService.hasApiKey('claude');
+
+        const clones = await onlineModelService.listClones();
+        const cloneStatuses: {[key: string]: boolean} = {};
+        for (const clone of clones) {
+          cloneStatuses[clone.id] = await onlineModelService.hasApiKey(clone.id);
+        }
         
         const newStatuses = {
           gemini: hasGeminiKey,
           chatgpt: hasOpenAIKey,
           deepseek: hasDeepSeekKey,
-          claude: hasClaudeKey
+          claude: hasClaudeKey,
+          ...cloneStatuses,
         };
         
         setOnlineModelStatuses(newStatuses);
@@ -777,6 +802,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
     useEffect(() => {
       const unsubscribe = onlineModelService.addListener('api-key-updated', () => {
         checkOnlineModelApiKeys();
+        loadCloneModels();
       });
       
       return () => {
