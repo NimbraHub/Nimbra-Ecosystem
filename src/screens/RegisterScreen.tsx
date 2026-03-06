@@ -60,6 +60,24 @@ export default function RegisterScreen({ navigation, route }: RegisterScreenProp
   const redirectAfterRegister = route.params?.redirectTo || 'MainTabs';
   const redirectParams = route.params?.redirectParams || { screen: 'HomeTab' };
 
+  const navigateAfterAuth = () => {
+    if (redirectAfterRegister === 'MainTabs') {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'MainTabs', params: redirectParams as any }],
+      });
+      return;
+    }
+
+    navigation.reset({
+      index: 1,
+      routes: [
+        { name: 'MainTabs', params: { screen: 'HomeTab' } as any },
+        { name: redirectAfterRegister as any, params: redirectParams as any },
+      ],
+    });
+  };
+
   const handleOpenTerms = async () => {
     try {
       await WebBrowser.openBrowserAsync('https://inferrlm.app/terms-conditions');
@@ -179,15 +197,8 @@ export default function RegisterScreen({ navigation, route }: RegisterScreenProp
       
       if (result.success) {
         await checkLoginStatus();
-        
-        navigation.reset({
-          index: 0,
-          routes: [
-            redirectAfterRegister === 'MainTabs' 
-              ? { name: 'MainTabs', params: redirectParams as any }
-              : { name: redirectAfterRegister as any }
-          ],
-        });
+
+        navigateAfterAuth();
       } else {
         setError(result.error || 'Google sign-in failed. Please try again.');
       }
@@ -216,14 +227,7 @@ export default function RegisterScreen({ navigation, route }: RegisterScreenProp
       if (result.success) {
         await checkLoginStatus();
 
-        navigation.reset({
-          index: 0,
-          routes: [
-            redirectAfterRegister === 'MainTabs' 
-              ? { name: 'MainTabs', params: redirectParams as any }
-              : { name: redirectAfterRegister as any }
-          ],
-        });
+        navigateAfterAuth();
       } else {
         setError(result.error || 'Apple sign-in failed. Please try again.');
       }
@@ -454,14 +458,7 @@ export default function RegisterScreen({ navigation, route }: RegisterScreenProp
       <Portal>
         <Dialog visible={dialogVisible} onDismiss={() => {
           setDialogVisible(false);
-          navigation.reset({
-            index: 0,
-            routes: [
-              redirectAfterRegister === 'MainTabs' 
-                ? { name: 'MainTabs', params: redirectParams as any }
-                : { name: redirectAfterRegister as any }
-            ],
-          });
+          navigateAfterAuth();
         }}>
           <Dialog.Title>Email Verification</Dialog.Title>
           <Dialog.Content>
@@ -474,14 +471,7 @@ export default function RegisterScreen({ navigation, route }: RegisterScreenProp
               key="dialog-ok-button"
               onPress={() => {
                 setDialogVisible(false);
-                navigation.reset({
-                  index: 0,
-                  routes: [
-                    redirectAfterRegister === 'MainTabs' 
-                      ? { name: 'MainTabs', params: redirectParams as any }
-                      : { name: redirectAfterRegister as any }
-                  ],
-                });
+                navigateAfterAuth();
               }}>OK</Button>
           </Dialog.Actions>
         </Dialog>
