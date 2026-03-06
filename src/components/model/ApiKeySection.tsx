@@ -22,6 +22,7 @@ interface ApiKeyItem {
   defaultBaseUrl: string;
   isClone: boolean;
   baseProvider: string;
+  systemInstruction: string;
 }
 
 const openAIPresetUrls = [
@@ -136,6 +137,10 @@ const ApiKeySection: React.FC<ApiKeySectionProps> = ({ onInputFocus }) => {
     setApiKeyItems(prev => prev.map(i => i.id === id ? { ...i, name: value } : i));
   };
 
+  const updateSystemInstruction = (id: string, value: string) => {
+    setApiKeyItems(prev => prev.map(i => i.id === id ? { ...i, systemInstruction: value } : i));
+  };
+
   const loadApiKeys = async () => {
     setIsLoadingApiKeys(true);
     try {
@@ -147,6 +152,7 @@ const ApiKeySection: React.FC<ApiKeySectionProps> = ({ onInputFocus }) => {
           const defaultModelName = onlineModelService.getDefaultModelName(bp.id);
           const customBaseUrl = await onlineModelService.getCustomBaseUrl(bp.id);
           const defaultBaseUrl = onlineModelService.getDefaultBaseUrl(bp.id);
+          const systemInstruction = await onlineModelService.getSystemInstruction(bp.id);
           return {
             id: bp.id,
             name: bp.name,
@@ -163,6 +169,7 @@ const ApiKeySection: React.FC<ApiKeySectionProps> = ({ onInputFocus }) => {
             defaultBaseUrl,
             isClone: false,
             baseProvider: bp.id,
+            systemInstruction: systemInstruction || '',
           } as ApiKeyItem;
         })
       );
@@ -176,6 +183,7 @@ const ApiKeySection: React.FC<ApiKeySectionProps> = ({ onInputFocus }) => {
           const defaultModelName = onlineModelService.getDefaultModelName(clone.id);
           const customBaseUrl = await onlineModelService.getCustomBaseUrl(clone.id);
           const defaultBaseUrl = onlineModelService.getDefaultBaseUrl(clone.id);
+          const systemInstruction = await onlineModelService.getSystemInstruction(clone.id);
           const baseMeta = BASE_PROVIDERS.find(b => b.id === clone.baseProvider);
           return {
             id: clone.id,
@@ -193,6 +201,7 @@ const ApiKeySection: React.FC<ApiKeySectionProps> = ({ onInputFocus }) => {
             defaultBaseUrl,
             isClone: true,
             baseProvider: clone.baseProvider,
+            systemInstruction: systemInstruction || '',
           } as ApiKeyItem;
         })
       );
@@ -257,6 +266,15 @@ const ApiKeySection: React.FC<ApiKeySectionProps> = ({ onInputFocus }) => {
         setApiKeyItems(prev => prev.map(i => i.id === id ? { ...i, baseUrl: '' } : i));
       }
 
+      const trimmedInstruction = item.systemInstruction.trim();
+      if (trimmedInstruction) {
+        await onlineModelService.saveSystemInstruction(id, trimmedInstruction);
+        setApiKeyItems(prev => prev.map(i => i.id === id ? { ...i, systemInstruction: trimmedInstruction } : i));
+      } else {
+        await onlineModelService.clearSystemInstruction(id);
+        setApiKeyItems(prev => prev.map(i => i.id === id ? { ...i, systemInstruction: '' } : i));
+      }
+
       showDialog('Success', `${item.name} settings saved`);
     } catch {
       const item = apiKeyItems.find(i => i.id === id);
@@ -289,6 +307,7 @@ const ApiKeySection: React.FC<ApiKeySectionProps> = ({ onInputFocus }) => {
         defaultBaseUrl: base.defaultBaseUrl,
         isClone: true,
         baseProvider: baseId,
+        systemInstruction: '',
       };
       setApiKeyItems(prev => {
         const lastIdx = [...prev].reduce((acc, item, idx) => {
@@ -464,6 +483,28 @@ const ApiKeySection: React.FC<ApiKeySectionProps> = ({ onInputFocus }) => {
                 />
               </View>
 
+              <View style={styles.inputContainer}>
+                <Text style={[styles.inputLabel, { color: themeColors.text }]}>System Instruction</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    styles.systemInstructionInput,
+                    {
+                      color: themeColors.text,
+                      backgroundColor: themeColors.background,
+                      borderColor: themeColors.borderColor,
+                    }
+                  ]}
+                  placeholder="Optional. Falls back to Settings → Model Settings → System Prompt"
+                  placeholderTextColor={themeColors.secondaryText}
+                  value={item.systemInstruction}
+                  onChangeText={(text) => updateSystemInstruction(item.id, text)}
+                  onFocus={handleInputFocus}
+                  multiline
+                  textAlignVertical="top"
+                />
+              </View>
+
               {(item.id === 'chatgpt' || item.baseProvider === 'chatgpt') && (
                 <View style={styles.presetContainer}>
                   <Text style={[styles.presetLabel, { color: themeColors.text }]}>Popular endpoints</Text>
@@ -600,6 +641,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingRight: 48,
     fontSize: 16,
+  },
+  systemInstructionInput: {
+    minHeight: 88,
+    height: 'auto',
+    paddingTop: 12,
+    paddingRight: 12,
   },
   inputLabel: {
     fontSize: 16,

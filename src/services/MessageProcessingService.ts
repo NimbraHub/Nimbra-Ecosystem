@@ -44,9 +44,17 @@ export class MessageProcessingService {
       
       const currentMessages = currentChat.messages;
       const isOnlineModel = !!activeProvider && ['gemini','chatgpt','deepseek','claude'].includes(OnlineModelService.getBaseProvider(activeProvider));
-  const isAppleFoundation = activeProvider === 'apple-foundation';
-      
-      const systemPrompt = settings.systemPrompt || 'You are a helpful AI assistant.';
+      const isAppleFoundation = activeProvider === 'apple-foundation';
+
+      const fallbackSystemPrompt = settings.systemPrompt || 'You are a helpful AI assistant.';
+      let systemPrompt = fallbackSystemPrompt;
+      if (isOnlineModel && activeProvider) {
+        const providerSystemInstruction = await onlineModelService.getSystemInstruction(activeProvider);
+        if (providerSystemInstruction && providerSystemInstruction.trim()) {
+          systemPrompt = providerSystemInstruction.trim();
+        }
+      }
+
       const processedMessages = currentMessages.some(msg => msg.role === 'system')
         ? currentMessages
         : [{ role: 'system', content: systemPrompt, id: 'system-prompt' }, ...currentMessages];
