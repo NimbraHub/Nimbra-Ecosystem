@@ -152,13 +152,6 @@ const licenses: License[] = [
     repositoryUrl: 'https://github.com/OP-Engineering/op-sqlite'
   },
   {
-    name: '@dr.pogodin/react-native-fs',
-    description: 'Native filesystem access for React Native',
-    licenseType: 'MIT License',
-    licenseUrl: 'https://github.com/birdofpreyru/react-native-fs/blob/master/LICENSE.md',
-    repositoryUrl: 'https://github.com/birdofpreyru/react-native-fs'
-  },
-  {
     name: '@react-native-google-signin/google-signin',
     description: 'Google Sign-In for React Native',
     licenseType: 'MIT License',
