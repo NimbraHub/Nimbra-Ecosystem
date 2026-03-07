@@ -7,7 +7,6 @@ import {
   Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Button, Portal } from 'react-native-paper';
 import Dialog from './Dialog';
 import * as DocumentPicker from 'expo-document-picker';
 import { useTheme } from '../context/ThemeContext';
@@ -155,8 +154,10 @@ export default function MultimodalDialog({ visible, onDismiss }: MultimodalDialo
   };
 
   return (
-    <Portal>
-      <Dialog visible={visible} onDismiss={onDismiss} style={[styles.dialog, { backgroundColor: colors.background }]}>
+    <Dialog visible={visible} onDismiss={onDismiss} style={[styles.dialog, { backgroundColor: colors.background }]}
+      buttonText="Close"
+      onClose={onDismiss}
+    >
         <Dialog.Title style={[styles.title, { color: colors.text }]}>
           Multimodal Test Suite
         </Dialog.Title>
@@ -204,11 +205,7 @@ export default function MultimodalDialog({ visible, onDismiss }: MultimodalDialo
             ) : null}
           </View>
         </Dialog.Content>
-        <Dialog.Actions>
-          <Button onPress={onDismiss}>Close</Button>
-        </Dialog.Actions>
       </Dialog>
-    </Portal>
   );
 }
 

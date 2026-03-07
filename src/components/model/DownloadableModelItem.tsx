@@ -10,7 +10,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
 import { getThemeAwareColor, getBrowserDownloadTextColor } from '../../utils/ColorUtils';
-import { Portal, PaperProvider, Button } from 'react-native-paper';
 import Dialog from '../Dialog';
 
 import { ModelType } from '../../types/models';
@@ -263,17 +262,14 @@ const DownloadableModelItem: React.FC<DownloadableModelItemProps> = ({
         </View>
       </TouchableOpacity>
 
-      <Portal>
-        <Dialog visible={dialogVisible} onDismiss={hideDialog}>
-          <Dialog.Title>{dialogTitle}</Dialog.Title>
-          <Dialog.Content>
-            <Text>{dialogMessage}</Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={hideDialog}>OK</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <Dialog
+        visible={dialogVisible}
+        onDismiss={hideDialog}
+        title={dialogTitle}
+        description={dialogMessage}
+        buttonText="OK"
+        onClose={hideDialog}
+      />
     </>
   );
 };

@@ -16,14 +16,13 @@ import { RootStackParamList } from '../types/navigation';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
-import { 
+import {
   TextInput, 
   Text, 
   Surface, 
   Button, 
   HelperText,
   Divider,
-  Portal,
   Checkbox,
 } from 'react-native-paper';
 import Dialog from '../components/Dialog';
@@ -455,27 +454,20 @@ export default function RegisterScreen({ navigation, route }: RegisterScreenProp
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <Portal>
-        <Dialog visible={dialogVisible} onDismiss={() => {
+      <Dialog
+        visible={dialogVisible}
+        onDismiss={() => {
           setDialogVisible(false);
           navigateAfterAuth();
-        }}>
-          <Dialog.Title>Email Verification</Dialog.Title>
-          <Dialog.Content>
-            <Text variant="bodyMedium">
-              A verification email has been sent to your email address. Please verify your email before continuing.
-            </Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button 
-              key="dialog-ok-button"
-              onPress={() => {
-                setDialogVisible(false);
-                navigateAfterAuth();
-              }}>OK</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+        }}
+        title="Email Verification"
+        description="A verification email has been sent to your email address. Please verify your email before continuing."
+        buttonText="OK"
+        onClose={() => {
+          setDialogVisible(false);
+          navigateAfterAuth();
+        }}
+      />
     </SafeAreaView>
   );
 }

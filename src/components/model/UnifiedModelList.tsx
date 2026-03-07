@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import { Text, ActivityIndicator, Portal, Button, TextInput } from 'react-native-paper';
+import { Text, ActivityIndicator, TextInput } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
@@ -134,14 +134,12 @@ const UnifiedModelList: React.FC<UnifiedModelListProps> = ({
       </ScrollView>
 
       {logic.modelDetailsLoading && (
-        <Portal>
-          <Dialog visible={true}>
-            <Dialog.Content style={styles.loadingDialog}>
-              <ActivityIndicator size="large" />
-              <Text style={[styles.loadingDialogText, { color: themeColors.text }]}>Loading model details...</Text>
-            </Dialog.Content>
-          </Dialog>
-        </Portal>
+        <Dialog visible={true} onDismiss={undefined}>
+          <View style={styles.loadingDialog}>
+            <ActivityIndicator size="large" />
+            <Text style={[styles.loadingDialogText, { color: themeColors.text }]}>Loading model details...</Text>
+          </View>
+        </Dialog>
       )}
 
       <ModelFilesDialog
@@ -155,17 +153,14 @@ const UnifiedModelList: React.FC<UnifiedModelListProps> = ({
         onDownloadMLXModel={handlers.handleDownloadMLXModel}
       />
 
-      <Portal>
-        <Dialog visible={logic.dialogVisible} onDismiss={logic.hideDialog}>
-          <Dialog.Title>{logic.dialogTitle}</Dialog.Title>
-          <Dialog.Content>
-            <Text>{logic.dialogMessage}</Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={logic.hideDialog}>OK</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <Dialog
+        visible={logic.dialogVisible}
+        onDismiss={logic.hideDialog}
+        title={logic.dialogTitle}
+        description={logic.dialogMessage}
+        buttonText="OK"
+        onClose={logic.hideDialog}
+      />
 
       <ModelWarningDialog
         visible={logic.showWarningDialog}

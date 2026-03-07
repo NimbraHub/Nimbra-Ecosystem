@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator,
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
 import { onlineModelService } from '../../services/OnlineModelService';
-import { Portal, Button, Surface } from 'react-native-paper';
+import { Surface } from 'react-native-paper';
 import Dialog from '../Dialog';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -542,17 +542,14 @@ const ApiKeySection: React.FC<ApiKeySectionProps> = ({ onInputFocus }) => {
       ))}
       </View>
 
-      <Portal>
-        <Dialog visible={dialogVisible} onDismiss={hideDialog}>
-          <Dialog.Title>{dialogTitle}</Dialog.Title>
-          <Dialog.Content>
-            <Text style={{ color: themeColors.text }}>{dialogMessage}</Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={hideDialog}>OK</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <Dialog
+        visible={dialogVisible}
+        onDismiss={hideDialog}
+        title={dialogTitle}
+        description={dialogMessage}
+        buttonText="OK"
+        onClose={hideDialog}
+      />
     </Surface>
   );
 };
