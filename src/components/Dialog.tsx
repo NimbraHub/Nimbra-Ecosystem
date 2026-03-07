@@ -202,17 +202,20 @@ const AppDialog = (({
                   </TouchableOpacity>
                 </View>
               ) : (
-                <TouchableOpacity
-                  style={[
-                    styles.modalButton,
-                    { backgroundColor: buttonColor || themeColors.primary },
-                  ]}
-                  onPress={close}
-                >
-                  <Text style={[styles.modalButtonText, { color: buttonTextColor }]}>
-                    {buttonText || 'OK'}
-                  </Text>
-                </TouchableOpacity>
+                <View style={styles.dualButtonRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.modalButton,
+                      styles.primaryButton,
+                      { flex: 1, backgroundColor: buttonColor || themeColors.primary },
+                    ]}
+                    onPress={close}
+                  >
+                    <Text style={[styles.modalButtonText, { color: buttonTextColor }]}>
+                      {buttonText || 'OK'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </>
           ) : (
