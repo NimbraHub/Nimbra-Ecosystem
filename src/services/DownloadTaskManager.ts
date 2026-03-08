@@ -674,6 +674,15 @@ export class DownloadTaskManager extends EventEmitter {
 
         await filePromise;
 
+        this.emit('progress', {
+          progress: (downloadedBytes / totalSize) * 100,
+          bytesDownloaded: downloadedBytes,
+          totalBytes: totalSize,
+          status: 'transferring',
+          modelName: sanitizedModelId,
+          downloadId,
+        });
+
         const tempModelPath = `${this.fileManager.getBaseDir()}/${tempFileName}`;
         const fileExistsInTemp = await FileSystem.getInfoAsync(tempFilePath);
         const fileExistsInModels = await FileSystem.getInfoAsync(tempModelPath);
@@ -688,6 +697,15 @@ export class DownloadTaskManager extends EventEmitter {
 
         this.tempNameMap.delete(tempFileName);
       }
+
+      this.emit('progress', {
+        progress: 100,
+        bytesDownloaded: totalSize,
+        totalBytes: totalSize,
+        status: 'transferring',
+        modelName: sanitizedModelId,
+        downloadId,
+      });
 
       this.startedDisplayNames.delete(sanitizedModelId);
       await this.removeMLXManifest(sanitizedModelId);

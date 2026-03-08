@@ -4,6 +4,7 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { fs as FileSystem } from '../services/fs';
 import { useTheme } from '../context/ThemeContext';
@@ -104,7 +105,7 @@ export default function DownloadsScreen() {
     return data.status !== 'completed' &&
            data.status !== 'failed' &&
            data.status !== 'cancelled' &&
-           data.progress < 100;
+           (data.progress < 100 || data.status === 'transferring');
   });
 
   const downloads: DownloadItem[] = activeDownloads.map(([name, data]) => ({
@@ -308,7 +309,10 @@ export default function DownloadsScreen() {
     const packageFiles = mlxPackageFiles[item.name] || [];
     const isMLXDownload = packageFiles.length > 0;
     const isExpanded = expandedPackages.has(item.name);
-    const progressText = `${Math.floor(item.progress || 0)}% • ${formatBytes(item.bytesDownloaded || 0)} / ${formatBytes(item.totalBytes || 0)}`;
+    const isTransferring = item.status === 'transferring';
+    const progressText = isTransferring
+      ? 'Transferring to models...'
+      : `${Math.floor(item.progress || 0)}% • ${formatBytes(item.bytesDownloaded || 0)} / ${formatBytes(item.totalBytes || 0)}`;
     
     return (
       <View style={[styles.downloadItem, { backgroundColor: themeColors.borderColor }]}>
@@ -331,19 +335,26 @@ export default function DownloadsScreen() {
               </TouchableOpacity>
             )}
           </View>
-          <View style={styles.downloadActions}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => handleCancel(item.name)}
-            >
-              <MaterialCommunityIcons name="close-circle" size={24} color={getThemeAwareColor('#ff4444', currentTheme)} />
-            </TouchableOpacity>
-          </View>
+          {!isTransferring && (
+            <View style={styles.downloadActions}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => handleCancel(item.name)}
+              >
+                <MaterialCommunityIcons name="close-circle" size={24} color={getThemeAwareColor('#ff4444', currentTheme)} />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
         
-        <Text style={[styles.downloadProgress, { color: themeColors.secondaryText }]}>
-          {progressText}
-        </Text>
+        <View style={styles.transferRow}>
+          {isTransferring && (
+            <ActivityIndicator size="small" color={getThemeAwareColor('#4a0660', currentTheme)} style={styles.transferSpinner} />
+          )}
+          <Text style={[styles.downloadProgress, { color: themeColors.secondaryText }]}>
+            {progressText}
+          </Text>
+        </View>
 
         {isMLXDownload && isExpanded && (
           <View style={styles.packageFilesContainer}>
@@ -459,6 +470,15 @@ const styles = StyleSheet.create({
   },
   downloadProgress: {
     fontSize: 14,
+    marginBottom: 8,
+    flex: 1,
+  },
+  transferRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  transferSpinner: {
+    marginRight: 6,
     marginBottom: 8,
   },
   progressBar: {
