@@ -137,7 +137,7 @@ export default {
             "targetSdkVersion": 36
           },
           "ios": {
-            "deploymentTarget": "17.0"
+            "deploymentTarget": "26.0"
           }
         }
       ],
