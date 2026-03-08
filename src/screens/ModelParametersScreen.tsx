@@ -4,7 +4,8 @@
   from the Model Settings section on the Settings screen.
 */
 import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
@@ -154,7 +155,18 @@ export default function ModelParametersScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <AppHeader title="Model Parameters" showBackButton />
+      <AppHeader         title="AI Content Terms"
+              leftComponent={
+                <TouchableOpacity
+                  style={styles.backButton}
+                  onPress={() => navigation.goBack()}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <MaterialCommunityIcons name="arrow-left" size={24} color={themeColors.headerText} />
+                </TouchableOpacity>
+              }
+              rightButtons={[]}
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
         <ModelSettingsSampling
@@ -317,6 +329,14 @@ export default function ModelParametersScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     paddingBottom: 32,
