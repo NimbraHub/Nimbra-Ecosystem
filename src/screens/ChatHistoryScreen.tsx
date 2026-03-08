@@ -14,8 +14,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import chatManager, { Chat } from '../utils/ChatManager';
 import AppHeader from '../components/AppHeader';
-import { Portal, Text, Button } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 import Dialog from '../components/Dialog';
+import { useDialog } from '../hooks/useDialog';
 
 const PAGE_SIZE = 15;
 
@@ -31,19 +32,7 @@ export default function ChatHistoryScreen() {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const pageRef = useRef(1);
 
-  const [dialogVisible, setDialogVisible] = useState(false);
-  const [dialogTitle, setDialogTitle] = useState('');
-  const [dialogMessage, setDialogMessage] = useState('');
-  const [dialogActions, setDialogActions] = useState<React.ReactNode[]>([]);
-
-  const hideDialog = () => setDialogVisible(false);
-
-  const showDialog = (title: string, message: string, actions: React.ReactNode[]) => {
-    setDialogTitle(title);
-    setDialogMessage(message);
-    setDialogActions(actions);
-    setDialogVisible(true);
-  };
+  const { dialogVisible, dialogTitle, dialogMessage, dialogPrimaryText, dialogPrimaryPress, dialogSecondaryText, dialogSecondaryPress, showDialog, hideDialog } = useDialog();
 
   useEffect(() => {
     setIsLoading(true);
@@ -94,9 +83,7 @@ export default function ChatHistoryScreen() {
         params: { loadChatId: targetId },
       });
     } catch (error) {
-      showDialog('Error', 'Failed to load selected chat', [
-        <Button key="ok" onPress={hideDialog}>OK</Button>
-      ]);
+      showDialog('Error', 'Failed to load selected chat');
     }
   };
 
@@ -123,18 +110,8 @@ export default function ChatHistoryScreen() {
     showDialog(
       'Delete Chat',
       'Are you sure you want to delete this chat?',
-      [
-        <Button key="cancel" onPress={hideDialog}>Cancel</Button>,
-        <Button
-          key="delete"
-          onPress={async () => {
-            hideDialog();
-            await chatManager.deleteChat(chatId);
-          }}
-        >
-          Delete
-        </Button>
-      ]
+      { label: 'Delete', onPress: async () => { hideDialog(); await chatManager.deleteChat(chatId); } },
+      { label: 'Cancel', onPress: hideDialog }
     );
   };
 
@@ -142,18 +119,8 @@ export default function ChatHistoryScreen() {
     showDialog(
       'Delete All Chats',
       'Are you sure you want to delete all chat histories? This cannot be undone.',
-      [
-        <Button key="cancel" onPress={hideDialog}>Cancel</Button>,
-        <Button
-          key="delete"
-          onPress={async () => {
-            hideDialog();
-            await chatManager.deleteAllChats();
-          }}
-        >
-          Delete All
-        </Button>
-      ]
+      { label: 'Delete All', onPress: async () => { hideDialog(); await chatManager.deleteAllChats(); } },
+      { label: 'Cancel', onPress: hideDialog }
     );
   };
 
@@ -282,17 +249,16 @@ export default function ChatHistoryScreen() {
         )}
       </View>
 
-      <Portal>
-        <Dialog visible={dialogVisible} onDismiss={hideDialog}>
-          <Dialog.Title>{dialogTitle}</Dialog.Title>
-          <Dialog.Content>
-            <Text>{dialogMessage}</Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            {dialogActions}
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <Dialog
+        visible={dialogVisible}
+        onDismiss={hideDialog}
+        title={dialogTitle}
+        description={dialogMessage}
+        primaryButtonText={dialogPrimaryText}
+        onPrimaryPress={dialogPrimaryPress}
+        secondaryButtonText={dialogSecondaryText}
+        onSecondaryPress={dialogSecondaryPress}
+      />
     </View>
   );
 }

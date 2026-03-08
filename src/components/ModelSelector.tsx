@@ -22,7 +22,7 @@ import { getThemeAwareColor } from '../utils/ColorUtils';
 import { onlineModelService } from '../services/OnlineModelService';
 import { engineService } from '../services/inference-engine-service';
 import { llamaManager } from '../utils/LlamaManager';
-import { Portal, Text, Button } from 'react-native-paper';
+import { Portal, Text } from 'react-native-paper';
 import Dialog from './Dialog';
 import Slider from '@react-native-community/slider';
 import { useNavigation } from '@react-navigation/native';
@@ -130,7 +130,10 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
     const [dialogVisible, setDialogVisible] = useState(false);
     const [dialogTitle, setDialogTitle] = useState('');
     const [dialogMessage, setDialogMessage] = useState('');
-    const [dialogActions, setDialogActions] = useState<React.ReactNode[]>([]);
+    const [dialogPrimaryText, setDialogPrimaryText] = useState<string | undefined>();
+    const [dialogPrimaryPress, setDialogPrimaryPress] = useState<(() => void) | undefined>();
+    const [dialogSecondaryText, setDialogSecondaryText] = useState<string | undefined>();
+    const [dialogSecondaryPress, setDialogSecondaryPress] = useState<(() => void) | undefined>();
 
     const [projectorSelectorVisible, setProjectorSelectorVisible] = useState(false);
     const [projectorModels, setProjectorModels] = useState<StoredModel[]>([]);
@@ -150,10 +153,14 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
 
     const hideDialog = () => setDialogVisible(false);
 
-    const showDialog = (title: string, message: string, actions: React.ReactNode[]) => {
+    const showDialog = (title: string, message: string, primary?: { label: string; onPress: () => void }, secondary?: { label: string; onPress: () => void }) => {
       setDialogTitle(title);
       setDialogMessage(message);
-      setDialogActions(actions);
+      const autoClose = () => setDialogVisible(false);
+      setDialogPrimaryText(primary?.label ?? 'OK');
+      setDialogPrimaryPress(primary ? () => primary.onPress : autoClose);
+      setDialogSecondaryText(secondary?.label);
+      setDialogSecondaryPress(secondary ? () => secondary.onPress : undefined);
       setDialogVisible(true);
     };
 
@@ -396,14 +403,12 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
         if (mode === 'vision' && visionModelName && projectorName) {
           showDialog(
             'Multimodal Model Ready',
-            `Loading ${visionModelName} with vision capabilities using ${projectorName}`,
-            [<Button key="ok" onPress={hideDialog}>OK</Button>]
+            `Loading ${visionModelName} with vision capabilities using ${projectorName}`
           );
         } else if (mode === 'text' && visionModelName) {
           showDialog(
             'Text-Only Model Ready',
-            `Loading ${visionModelName} in text-only mode (without vision capabilities)`,
-            [<Button key="ok" onPress={hideDialog}>OK</Button>]
+            `Loading ${visionModelName} in text-only mode (without vision capabilities)`
           );
         }
         onModelSelect('local', modelPath, projectorPath);
@@ -418,14 +423,12 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       if (mode === 'vision') {
         showDialog(
           'Success',
-          'Vision model loaded successfully! You can now send images and photos.',
-          [<Button key="ok" onPress={hideDialog}>OK</Button>]
+          'Vision model loaded successfully! You can now send images and photos.'
         );
       } else if (mode === 'text') {
         showDialog(
           'Success',
-          'Model loaded successfully in text-only mode.',
-          [<Button key="ok" onPress={hideDialog}>OK</Button>]
+          'Model loaded successfully in text-only mode.'
         );
       }
     };
@@ -458,8 +461,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
         if (isGenerating) {
           showDialog(
             'Model In Use',
-            'Cannot change model while generating a response. Please wait for the current generation to complete or cancel it.',
-            [<Button key="ok" onPress={hideDialog}>OK</Button>]
+            'Cannot change model while generating a response. Please wait for the current generation to complete or cancel it.'
           );
           return;
         }
@@ -476,19 +478,8 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
               showDialog(
                 'Remote Models Disabled',
                 'Remote models require the "Enable Remote Models" setting to be turned on and you need to be signed in. Would you like to go to Settings to configure this?',
-                [
-                  <Button key="cancel" onPress={hideDialog}>Cancel</Button>,
-                  <Button 
-                    key="settings" 
-                    onPress={() => {
-                      hideDialog();
-                      if (onClose) onClose();
-                      navigation.navigate('MainTabs', { screen: 'SettingsTab' });
-                    }}
-                  >
-                    Go to Settings
-                  </Button>
-                ]
+                { label: 'Go to Settings', onPress: () => { hideDialog(); if (onClose) onClose(); navigation.navigate('MainTabs', { screen: 'SettingsTab' }); } },
+                { label: 'Cancel', onPress: hideDialog }
               );
             }, 300);
             return;
@@ -517,8 +508,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
           if (!enabled[engine]) {
             showDialog(
               'Engine Disabled',
-              `${engine === 'llama' ? 'Llama.cpp' : 'MLX'} is disabled. Enable it in Settings to load this model.`,
-              [<Button key="ok" onPress={hideDialog}>OK</Button>]
+              `${engine === 'llama' ? 'Llama.cpp' : 'MLX'} is disabled. Enable it in Settings to load this model.`
             );
             return;
           }
@@ -542,28 +532,22 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       showDialog(
         'Vision Model Detected',
         `${model.name} appears to be a vision model. Do you want to load it with multimodal capabilities?`,
-        [
-          <Button 
-            key="text-only" 
-            onPress={() => {
-              hideDialog();
-              const storedModel = model as StoredModel;
-              const modelPath = storedModel.isExternal && storedModel.originalPath ? storedModel.originalPath : storedModel.path;
-              void startLocalLoad(modelPath, undefined, 'text', model.name, undefined, storedModel.modelFormat);
-            }}
-          >
-            Text Only
-          </Button>,
-          <Button 
-            key="multimodal" 
-            onPress={() => {
-              hideDialog();
-              promptForProjector(model);
-            }}
-          >
-            With Vision
-          </Button>
-        ]
+        {
+          label: 'With Vision',
+          onPress: () => {
+            hideDialog();
+            promptForProjector(model);
+          }
+        },
+        {
+          label: 'Text Only',
+          onPress: () => {
+            hideDialog();
+            const storedModel = model as StoredModel;
+            const modelPath = storedModel.isExternal && storedModel.originalPath ? storedModel.originalPath : storedModel.path;
+            void startLocalLoad(modelPath, undefined, 'text', model.name, undefined, storedModel.modelFormat);
+          }
+        }
       );
     };
 
@@ -622,8 +606,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       if (!selectedModelPath) {
         showDialog(
           'No Model Loaded',
-          'There is no model currently loaded to unload.',
-          [<Button key="ok" onPress={hideDialog}>OK</Button>]
+          'There is no model currently loaded to unload.'
         );
         return;
       }
@@ -633,33 +616,30 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
         ? 'This will stop the current generation. Are you sure you want to unload the model?'
         : 'Are you sure you want to unload the current model?';
 
-      const actions = [
-        <Button key="cancel" onPress={hideDialog}>Cancel</Button>,
-        <Button key="unload" onPress={async () => {
-          hideDialog();
-          try {
-            await unloadModel();
-          } catch (error) {
-            showDialog(
-              'Unload Warning',
-              `Model unloading completed with warnings. The model has been cleared from memory.`,
-              [<Button key="ok" onPress={hideDialog}>OK</Button>]
-            );
+      showDialog(title, message,
+        {
+          label: 'Unload',
+          onPress: async () => {
+            hideDialog();
+            try {
+              await unloadModel();
+            } catch (error) {
+              showDialog(
+                'Unload Warning',
+                `Model unloading completed with warnings. The model has been cleared from memory.`
+              );
+            }
           }
-        }}>
-          Unload
-        </Button>
-      ];
-
-      showDialog(title, message, actions);
+        },
+        { label: 'Cancel', onPress: hideDialog }
+      );
     };
 
     const handleUnloadProjector = () => {
       if (!selectedProjectorPath && !isMultimodalEnabled) {
         showDialog(
           'No Projector Loaded',
-          'There is no projector model currently loaded to unload.',
-          [<Button key="ok" onPress={hideDialog}>OK</Button>]
+          'There is no projector model currently loaded to unload.'
         );
         return;
       }
@@ -669,32 +649,29 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
         ? 'This will disable vision capabilities and stop the current generation. Are you sure you want to unload the projector?'
         : 'Are you sure you want to unload the projector model? This will disable vision capabilities.';
 
-      const actions = [
-        <Button key="cancel" onPress={hideDialog}>Cancel</Button>,
-        <Button key="unload" onPress={async () => {
-          hideDialog();
-          try {
-            await unloadProjector();
-          } catch (error) {
-            showDialog(
-              'Unload Warning',
-              `Projector unloading completed with warnings. Vision capabilities have been disabled.`,
-              [<Button key="ok" onPress={hideDialog}>OK</Button>]
-            );
+      showDialog(title, message,
+        {
+          label: 'Unload Projector',
+          onPress: async () => {
+            hideDialog();
+            try {
+              await unloadProjector();
+            } catch (error) {
+              showDialog(
+                'Unload Warning',
+                `Projector unloading completed with warnings. Vision capabilities have been disabled.`
+              );
+            }
           }
-        }}>
-          Unload Projector
-        </Button>
-      ];
-
-      showDialog(title, message, actions);
+        },
+        { label: 'Cancel', onPress: hideDialog }
+      );
     };
 
     const handleApiKeyRequired = (model: OnlineModel) => {
       showDialog(
         'API Key Required',
-        `${model.name} by ${model.provider} requires an API key. Please configure it in Models > Remote Models.`,
-        [<Button key="ok" onPress={hideDialog}>OK</Button>]
+        `${model.name} by ${model.provider} requires an API key. Please configure it in Models > Remote Models.`
       );
     };
 
@@ -831,8 +808,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
             if (isGenerating) {
               showDialog(
                 'Model In Use',
-                'Cannot change model while generating a response. Please wait for the current generation to complete or cancel it.',
-                [<Button key="ok" onPress={hideDialog}>OK</Button>]
+                'Cannot change model while generating a response. Please wait for the current generation to complete or cancel it.'
               );
               return;
             }
@@ -1152,76 +1128,78 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
           )}
 
           {dialogVisible && (
-          <Dialog visible={dialogVisible} onDismiss={hideDialog}>
-            <Dialog.Title>{dialogTitle}</Dialog.Title>
-            <Dialog.Content>
-              <Text variant="bodyMedium">{dialogMessage}</Text>
-            </Dialog.Content>
-            <Dialog.Actions>
-              {dialogActions}
-            </Dialog.Actions>
-          </Dialog>
+          <Dialog
+            visible={dialogVisible}
+            onDismiss={hideDialog}
+            title={dialogTitle}
+            description={dialogMessage}
+            primaryButtonText={dialogPrimaryText}
+            onPrimaryPress={dialogPrimaryPress}
+            secondaryButtonText={dialogSecondaryText}
+            onSecondaryPress={dialogSecondaryPress}
+          />
           )}
 
           {projectorSelectorVisible && (
-          <Dialog visible={projectorSelectorVisible} onDismiss={handleProjectorSelectorClose}>
-            <Dialog.Title>Select Multimodal Projector</Dialog.Title>
-            <Dialog.Content>
-              <Text style={{ marginBottom: 16, color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>
-                Choose a projector (mmproj) model to enable multimodal capabilities:
-              </Text>
-              {projectorModels.length === 0 ? (
-                <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-                  <MaterialCommunityIcons 
-                    name="cube-outline" 
-                    size={48} 
-                    color={currentTheme === 'dark' ? '#666' : '#ccc'} 
+          <Dialog
+            visible={projectorSelectorVisible}
+            onDismiss={handleProjectorSelectorClose}
+            title="Select Multimodal Projector"
+            primaryButtonText="Skip"
+            onPrimaryPress={handleProjectorSkip}
+            secondaryButtonText="Cancel"
+            onSecondaryPress={handleProjectorSelectorClose}
+          >
+            <Text style={{ marginBottom: 16, color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>
+              Choose a projector (mmproj) model to enable multimodal capabilities:
+            </Text>
+            {projectorModels.length === 0 ? (
+              <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                <MaterialCommunityIcons 
+                  name="cube-outline" 
+                  size={48} 
+                  color={currentTheme === 'dark' ? '#666' : '#ccc'} 
+                />
+                <Text style={{ 
+                  marginTop: 12, 
+                  textAlign: 'center',
+                  color: currentTheme === 'dark' ? '#ccc' : '#666' 
+                }}>
+                  No projector models found in your stored models.{'\n'}
+                </Text>
+              </View>
+            ) : (
+              projectorModels.map((model) => (
+                <TouchableOpacity
+                  key={model.path}
+                  style={[
+                    styles.projectorModelItem,
+                    { backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#f1f1f1' }
+                  ]}
+                  onPress={() => handleProjectorSelect(model)}
+                >
+                  <MaterialCommunityIcons
+                    name="cube-outline"
+                    size={20}
+                    color={currentTheme === 'dark' ? '#fff' : '#000'}
                   />
-                  <Text style={{ 
-                    marginTop: 12, 
-                    textAlign: 'center',
-                    color: currentTheme === 'dark' ? '#ccc' : '#666' 
-                  }}>
-                    No projector models found in your stored models.{'\n'}
-                  </Text>
-                </View>
-              ) : (
-                projectorModels.map((model) => (
-                  <TouchableOpacity
-                    key={model.path}
-                    style={[
-                      styles.projectorModelItem,
-                      { backgroundColor: currentTheme === 'dark' ? '#2a2a2a' : '#f1f1f1' }
-                    ]}
-                    onPress={() => handleProjectorSelect(model)}
-                  >
-                    <MaterialCommunityIcons
-                      name="cube-outline"
-                      size={20}
-                      color={currentTheme === 'dark' ? '#fff' : '#000'}
-                    />
-                    <View style={styles.projectorModelInfo}>
-                      <Text style={[
-                        styles.projectorModelName,
-                        { color: currentTheme === 'dark' ? '#fff' : '#000' }
-                      ]}>
-                        {model.name}
-                      </Text>
-                      <Text style={[
-                        styles.projectorModelSize,
-                        { color: currentTheme === 'dark' ? '#ccc' : '#666' }
-                      ]}>
-                        {(model.size / (1024 * 1024)).toFixed(1)} MB
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ))
-              )}
-            </Dialog.Content>
-            <Dialog.Actions>
-              <Button onPress={handleProjectorSkip}>Skip</Button>
-              <Button onPress={handleProjectorSelectorClose}>Cancel</Button>
-            </Dialog.Actions>
+                  <View style={styles.projectorModelInfo}>
+                    <Text style={[
+                      styles.projectorModelName,
+                      { color: currentTheme === 'dark' ? '#fff' : '#000' }
+                    ]}>
+                      {model.name}
+                    </Text>
+                    <Text style={[
+                      styles.projectorModelSize,
+                      { color: currentTheme === 'dark' ? '#ccc' : '#666' }
+                    ]}>
+                      {(model.size / (1024 * 1024)).toFixed(1)} MB
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
           </Dialog>
           )}
         </Portal>
