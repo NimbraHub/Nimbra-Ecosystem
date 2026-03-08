@@ -20,21 +20,18 @@ export const ModelScreenTabs: React.FC<ModelScreenTabsProps> = ({
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme as 'light' | 'dark'];
 
-  const handlePress = (tab: TabType) => {
-    requestAnimationFrame(() => onTabPress(tab));
-  };
-
   return (
     <View style={styles.tabContainer}>
       <View style={[styles.segmentedControl, { backgroundColor: themeColors.borderColor }]}>
         <TouchableOpacity
+          activeOpacity={1}
           style={[
             styles.segmentButton,
             { borderColor: themeColors.primary },
             activeTab === 'stored' && styles.activeSegment,
             activeTab === 'stored' && { backgroundColor: themeColors.primary }
           ]}
-          onPress={() => handlePress('stored')}
+          onPress={() => onTabPress('stored')}
         >
           <MaterialCommunityIcons 
             name="folder" 
@@ -50,13 +47,14 @@ export const ModelScreenTabs: React.FC<ModelScreenTabsProps> = ({
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
+          activeOpacity={1}
           style={[
             styles.segmentButton,
             { borderColor: themeColors.primary },
             activeTab === 'downloadable' && styles.activeSegment,
             activeTab === 'downloadable' && { backgroundColor: themeColors.primary }
           ]}
-          onPress={() => handlePress('downloadable')}
+          onPress={() => onTabPress('downloadable')}
         >
           <MaterialCommunityIcons 
             name="cloud-download" 
@@ -73,13 +71,14 @@ export const ModelScreenTabs: React.FC<ModelScreenTabsProps> = ({
         </TouchableOpacity>
         {enableRemoteModels && (
           <TouchableOpacity
+            activeOpacity={1}
             style={[
               styles.segmentButton,
               { borderColor: themeColors.primary },
               activeTab === 'remote' && styles.activeSegment,
               activeTab === 'remote' && { backgroundColor: themeColors.primary }
             ]}
-            onPress={() => handlePress('remote')}
+            onPress={() => onTabPress('remote')}
           >
             <MaterialCommunityIcons 
               name="cloud" 
