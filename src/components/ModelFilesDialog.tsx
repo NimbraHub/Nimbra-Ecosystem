@@ -32,8 +32,19 @@ export default function ModelFilesDialog({
   const [downloadingSelected, setDownloadingSelected] = useState(false);
 
   useEffect(() => {
+    console.log('[ModelFilesDialog] props_changed', {
+      visible,
+      hasModelDetails: !!modelDetails,
+      modelId: modelDetails?.id,
+      modelFormat: modelDetails?.modelFormat,
+      fileCount: modelDetails?.files?.length,
+      hasFiles: !!modelDetails?.files,
+      hasMlxGroup: !!modelDetails?.mlxFileGroup,
+      hasVision: modelDetails?.hasVision,
+    });
     if (visible && modelDetails && modelDetails.modelFormat === ModelFormat.MLX && modelDetails.mlxFileGroup) {
       const requiredFilenames = modelDetails.mlxFileGroup.required.map(f => f.rfilename);
+      console.log('[ModelFilesDialog] mlx_preselect', requiredFilenames.length);
       setSelectedFiles(new Set(requiredFilenames));
     } else if (!visible) {
       setSelectedFiles(new Set());
@@ -96,7 +107,17 @@ export default function ModelFilesDialog({
     }
   };
 
-  if (!visible || !modelDetails) return null;
+  if (!visible || !modelDetails) {
+    console.log('[ModelFilesDialog] early_return', { visible, hasModelDetails: !!modelDetails });
+    return null;
+  }
+
+  console.log('[ModelFilesDialog] rendering', {
+    id: modelDetails.id,
+    format: modelDetails.modelFormat,
+    fileCount: modelDetails.files?.length,
+    files: modelDetails.files?.map(f => ({ name: f.filename, size: f.size, hasUrl: !!f.downloadUrl })),
+  });
 
   const isMLXModel = modelDetails.modelFormat === ModelFormat.MLX;
   const isGGUFModel = modelDetails.modelFormat === ModelFormat.GGUF;

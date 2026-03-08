@@ -133,12 +133,12 @@ const UnifiedModelList: React.FC<UnifiedModelListProps> = ({
       </ScrollView>
 
       {logic.modelDetailsLoading && (
-        <Dialog visible={true} onDismiss={undefined}>
-          <View style={styles.loadingDialog}>
+        <View style={styles.loadingOverlay}>
+          <View style={[styles.loadingCard, { backgroundColor: themeColors.background }]}>
             <ActivityIndicator size="large" />
             <Text style={[styles.loadingDialogText, { color: themeColors.text }]}>Loading model details...</Text>
           </View>
-        </Dialog>
+        </View>
       )}
 
       <ModelFilesDialog
@@ -237,7 +237,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 2,
   },
-  loadingDialog: {
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  loadingCard: {
+    padding: 24,
+    borderRadius: 16,
     alignItems: 'center',
     gap: 16,
   },

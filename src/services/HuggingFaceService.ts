@@ -178,6 +178,7 @@ class HuggingFaceService {
   }
 
   async getModelFiles(modelId: string): Promise<HFFile[]> {
+    console.log('[getModelFiles] start', modelId);
     try {
       const url = `${this.apiUrl}/models/${modelId}/tree/main`;
       const response = await fetch(url, {
@@ -187,10 +188,12 @@ class HuggingFaceService {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.log('[getModelFiles] api_error', { status: response.status, errorText });
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const tree = await response.json();
+      console.log('[getModelFiles] tree_items', tree?.length);
       
       const modelFiles = tree
         .filter((item: any) => item.type === 'file')
@@ -202,6 +205,7 @@ class HuggingFaceService {
         }));
 
       const modelFormat = this.detectModelType(modelId, modelFiles);
+      console.log('[getModelFiles] detected_format', { modelFormat, totalFiles: modelFiles.length });
       
       if (modelFormat === ModelFormat.MLX) {
         return modelFiles;
@@ -211,13 +215,16 @@ class HuggingFaceService {
         return file.filename.endsWith('.gguf');
       });
 
+      console.log('[getModelFiles] returning', { ggufCount: ggufFiles.length, format: modelFormat });
       return ggufFiles;
     } catch (error) {
+      console.log('[getModelFiles] error', modelId, error);
       throw error;
     }
   }
 
   async getModelDetails(modelId: string): Promise<HFModelDetails> {
+    console.log('[getModelDetails] start', modelId);
     try {
       const [modelResponse, files] = await Promise.all([
         fetch(`${this.apiUrl}/models/${modelId}`, {
@@ -227,11 +234,22 @@ class HuggingFaceService {
         this.getModelFiles(modelId)
       ]);
 
+      console.log('[getModelDetails] api_response', {
+        status: modelResponse.status,
+        ok: modelResponse.ok,
+        fileCount: files?.length,
+      });
+
       if (!modelResponse.ok) {
         throw new Error(`HTTP ${modelResponse.status}: ${modelResponse.statusText}`);
       }
 
       const model = await modelResponse.json();
+      console.log('[getModelDetails] model_json', {
+        id: model?.id,
+        tags: model?.tags,
+        siblings: model?.siblings?.length,
+      });
       
       const modelFiles: ModelFile[] = files.map(f => ({
         rfilename: f.filename,
@@ -246,6 +264,14 @@ class HuggingFaceService {
       const mlxFileGroup = modelFormat === ModelFormat.MLX 
         ? this.getRequiredMLXFiles(files)
         : undefined;
+
+      console.log('[getModelDetails] result', {
+        format: modelFormat,
+        hasVision,
+        fileCount: files.length,
+        mlxGroupSize: mlxFileGroup?.required?.length,
+        fileNames: files.map(f => f.filename),
+      });
       
       return {
         ...model,
@@ -256,6 +282,7 @@ class HuggingFaceService {
         mlxFileGroup,
       };
     } catch (error) {
+      console.log('[getModelDetails] error', modelId, error);
       throw error;
     }
   }

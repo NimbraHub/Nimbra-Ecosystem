@@ -159,14 +159,25 @@ export const useUnifiedModelList = (
   };
 
   const handleModelPress = async (model: HFModel) => {
+    console.log('[handleModelPress] start', { modelId: model.id, format: model.modelFormat });
     setModelDetailsLoading(true);
     setSelectedModel(null);
     setSelectedFiles(new Set());
     
     try {
       const details = await huggingFaceService.getModelDetails(model.id);
+      console.log('[handleModelPress] details_received', {
+        id: details?.id,
+        format: details?.modelFormat,
+        fileCount: details?.files?.length,
+        hasFiles: !!details?.files,
+        emptyFiles: details?.files?.length === 0,
+        hasMlxGroup: !!details?.mlxFileGroup,
+        hasVision: details?.hasVision,
+      });
       setSelectedModel(details);
     } catch (error) {
+      console.log('[handleModelPress] error', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       showDialog('Error', `Failed to load model details: ${errorMessage}`);
     } finally {
