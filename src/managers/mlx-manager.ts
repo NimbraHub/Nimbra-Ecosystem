@@ -203,7 +203,11 @@ class MlxManager implements InferenceManager {
     const lastMessage = messages[messages.length - 1];
     const prompt = typeof lastMessage.content === 'string' ? lastMessage.content : '';
     console.log('mlx_gen_prompt', { promptLength: prompt.length, role: lastMessage.role });
-    
+
+    if (opts?.settings?.systemPrompt !== undefined) {
+      LLM.systemPrompt = opts.settings.systemPrompt;
+    }
+
     let full = '';
     let tokenCount = 0;
     await LLM.stream(prompt, token => {
