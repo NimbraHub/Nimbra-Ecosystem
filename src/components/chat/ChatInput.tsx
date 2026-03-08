@@ -903,7 +903,7 @@ export default function ChatInput({
             >
               <View style={styles.experimentalTag}>
                 <Text style={[styles.experimentalText, { color: isDark ? '#ffb74d' : '#f57c00' }]}>
-                  BETA
+                  EXPERIMENTAL
                 </Text>
               </View>
               
