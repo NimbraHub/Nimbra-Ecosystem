@@ -112,7 +112,6 @@ const UnifiedModelList: React.FC<UnifiedModelListProps> = ({
             isLoading={logic.hfLoading}
             searchQuery={logic.searchQuery}
             onModelPress={logic.handleModelPress}
-            onModelDownload={logic.handleHfModelDownload}
             isModelDownloaded={logic.isModelDownloaded}
             convertHfModelToDownloadable={logic.convertHfModelToDownloadable}
           />
