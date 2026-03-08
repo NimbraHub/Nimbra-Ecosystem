@@ -58,6 +58,29 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         try {
           const taskDownloads = await modelDownloader.getActiveDownloadsList();
+          const activeNames = new Set(
+            taskDownloads
+              .filter(dl =>
+                dl.modelName &&
+                !dl.modelName.startsWith('com.inferra.transfer.') &&
+                dl.status !== 'completed' &&
+                dl.status !== 'failed' &&
+                dl.status !== 'cancelled'
+              )
+              .map(dl => dl.modelName)
+          );
+
+          /*
+            Remove any saved entry that no longer has a live native task.
+            These are stale entries from a previous session where the download
+            finished while the app was backgrounded.
+          */
+          Object.keys(merged).forEach(key => {
+            if (!activeNames.has(key)) {
+              delete merged[key];
+            }
+          });
+
           for (const dl of taskDownloads) {
             if (
               dl.modelName &&
@@ -121,6 +144,13 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
         return newProgress;
       });
+      setTimeout(() => {
+        setDownloadProgress(prev => {
+          const next = { ...prev };
+          delete next[data.modelName];
+          return next;
+        });
+      }, 3000);
     };
 
     const handleDownloadFailed = (data: any) => {
@@ -138,6 +168,13 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
         return newProgress;
       });
+      setTimeout(() => {
+        setDownloadProgress(prev => {
+          const next = { ...prev };
+          delete next[data.modelName];
+          return next;
+        });
+      }, 3000);
     };
 
     const handleDownloadCancelled = (data: any) => {
