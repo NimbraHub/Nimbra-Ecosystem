@@ -130,6 +130,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   const [dialogSecondaryPress, setDialogSecondaryPress] = useState<(() => void) | undefined>(undefined);
 
   const hideDialog = () => {
+    console.log('[dialog] hide', { dialogLoading, dialogVisible, dialogTitle });
     setDialogVisible(false);
     setDialogLoading(false);
   };
@@ -143,6 +144,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
     secondary?: BtnCfg,
     loading: boolean = false
   ) => {
+    console.log('[dialog] show', { title, loading, hasPrimary: !!primary, hasSecondary: !!secondary });
     setDialogTitle(title);
     setDialogMessage(message);
     setDialogLoading(loading);
@@ -593,35 +595,47 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
       const totalSize = modelsSize + hfSize;
       const totalSizeText = formatBytes(totalSize);
 
-      showDialog(
-        'Clear All Models',
-        `Are you sure you want to delete all models? This action cannot be undone.\n\nStorage to be freed: ${totalSizeText}`,
-        {
-          label: 'Delete',
-          onPress: async () => {
-            hideDialog();
-            try {
-              console.log('[clearAllModels] deleting');
-              setClearingType('models');
-              await modelDownloader.clearAllModels();
-              console.log('[clearAllModels] models_cleared');
-              await modelSettingsService.clearAllSettings();
-              console.log('[clearAllModels] settings_cleared');
-              await loadStorageInfo();
-              console.log('[clearAllModels] storage_info_reloaded');
-              showDialog('Success', 'All models cleared successfully');
-            } catch (error) {
-              console.log('[clearAllModels] delete_error', error);
-              showDialog('Error', 'Failed to clear models');
-            } finally {
-              setClearingType(null);
+      hideDialog();
+      setTimeout(() => {
+        console.log('[clearAllModels] confirm_dialog_show');
+        showDialog(
+          'Clear All Models',
+          `Are you sure you want to delete all models? This action cannot be undone.\n\nStorage to be freed: ${totalSizeText}`,
+          {
+            label: 'Delete',
+            onPress: async () => {
+              console.log('[clearAllModels] confirm_delete_press');
+              hideDialog();
+              try {
+                console.log('[clearAllModels] deleting');
+                setClearingType('models');
+                await modelDownloader.clearAllModels();
+                console.log('[clearAllModels] models_cleared');
+                await modelSettingsService.clearAllSettings();
+                console.log('[clearAllModels] settings_cleared');
+                await loadStorageInfo();
+                console.log('[clearAllModels] storage_info_reloaded');
+                showDialog('Success', 'All models cleared successfully');
+              } catch (error) {
+                console.log('[clearAllModels] delete_error', error);
+                showDialog('Error', 'Failed to clear models');
+              } finally {
+                setClearingType(null);
+              }
+            }
+          },
+          {
+            label: 'Cancel',
+            onPress: () => {
+              console.log('[clearAllModels] confirm_cancel_press');
+              hideDialog();
             }
           }
-        },
-        { label: 'Cancel', onPress: hideDialog }
-      );
+        );
+      }, 50);
     } catch (error) {
       console.log('[clearAllModels] size_calc_error', error);
+      hideDialog();
       showDialog('Error', 'Failed to clear models');
     }
   };
