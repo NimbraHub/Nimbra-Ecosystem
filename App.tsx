@@ -24,7 +24,7 @@ import { initializeFirebase } from './src/services/FirebaseAuth';
 import { initGeminiService } from './src/services/GeminiInitializer';
 import { initOpenAIService } from './src/services/OpenAIInitializer';
 import { initClaudeService } from './src/services/ClaudeInitializer';
-import { PaperProvider } from 'react-native-paper';
+import { PaperProvider, MD3DarkTheme, MD3LightTheme } from 'react-native-paper';
 import { DialogProvider } from './src/context/DialogContext';
 import { ShowDialog } from './src/components/ShowDialog';
 import { initializeBindings } from './src/utils/llamaBinding';
@@ -311,21 +311,27 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <PaperProvider>
-        <ModelProvider>
-          <DownloadProvider>
-            <RemoteModelProvider>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <ThemeProvider>
+      <ThemeProvider>
+        <ThemedPaper>
+          <ModelProvider>
+            <DownloadProvider>
+              <RemoteModelProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
                   <DialogProvider>
                     <Navigation />
                   </DialogProvider>
-                </ThemeProvider>
-              </GestureHandlerRootView>
-            </RemoteModelProvider>
-          </DownloadProvider>
-        </ModelProvider>
-      </PaperProvider>
+                </GestureHandlerRootView>
+              </RemoteModelProvider>
+            </DownloadProvider>
+          </ModelProvider>
+        </ThemedPaper>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
+}
+
+function ThemedPaper({ children }: { children: React.ReactNode }) {
+  const { theme: currentTheme } = useTheme();
+  const paperTheme = currentTheme === 'dark' ? MD3DarkTheme : MD3LightTheme;
+  return <PaperProvider theme={paperTheme}>{children}</PaperProvider>;
 }
