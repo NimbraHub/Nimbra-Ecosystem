@@ -511,7 +511,8 @@ export class DownloadTaskManager extends EventEmitter {
             status: value.status,
             lastPersistedProgress: value.lastPersistedProgress,
           }
-        }))
+        })),
+        tempNameMap: Array.from(this.tempNameMap.entries()),
       };
 
       await AsyncStorage.setItem(
@@ -545,6 +546,10 @@ export class DownloadTaskManager extends EventEmitter {
           };
           
           this.activeDownloads.set(item.modelName, downloadInfo);
+        }
+
+        for (const [k, v] of progressState.tempNameMap || []) {
+          this.tempNameMap.set(k, v);
         }
       }
     } catch (error) {
