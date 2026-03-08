@@ -14,8 +14,6 @@ import AppHeader from '../components/AppHeader';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { llamaManager } from '../utils/LlamaManager';
-import ModelSettingDialog from '../components/ModelSettingDialog';
-import StopWordsDialog from '../components/StopWordsDialog';
 import SystemPromptDialog from '../components/SystemPromptDialog';
 import { fs as FileSystem } from '../services/fs';
 import { useFocusEffect } from '@react-navigation/native';
@@ -103,7 +101,6 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   }>({
     visible: false,
   });
-  const [showStopWordsDialog, setShowStopWordsDialog] = useState(false);
   const [showSystemPromptDialog, setShowSystemPromptDialog] = useState(false);
   const [storageInfo, setStorageInfo] = useState({
     tempSize: '0 B',
@@ -403,19 +400,6 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
 
   const handleCloseDialog = () => {
     setDialogConfig({ visible: false });
-  };
-
-  const handleMaxTokensPress = () => {
-    handleOpenDialog({
-      key: 'maxTokens',
-      label: 'Max Response Tokens',
-      value: modelSettings.maxTokens,
-      defaultValue: DEFAULT_SETTINGS.maxTokens,
-      minimumValue: 1,
-      maximumValue: 4096,
-      step: 1,
-      description: "Maximum number of tokens in model responses. More tokens = longer responses but slower generation."
-    });
   };
 
   const gpuConfig = React.useMemo<GpuConfig | undefined>(() => {
@@ -775,8 +759,6 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
           defaultSettings={DEFAULT_SETTINGS}
           error={error}
           onSettingsChange={handleSettingsChange}
-          onMaxTokensPress={handleMaxTokensPress}
-          onStopWordsPress={() => setShowStopWordsDialog(true)}
           onDialogOpen={handleOpenDialog}
           activeEngine={activeInferenceEngine}
           engineEnabled={engineEnabled}
@@ -791,6 +773,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
           showAppleFoundationToggle={isAppleDevice}
           appleFoundationEnabled={appleFoundationEnabled}
           onToggleAppleFoundation={handleAppleFoundationToggle}
+          onModelParametersPress={() => navigation.navigate('ModelParameters')}
         />
 
         <StorageSection
@@ -809,55 +792,6 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
 
         <SystemInfoSection systemInfo={systemInfo} />
         
-        {dialogConfig.setting && (
-          <ModelSettingDialog
-            key={dialogConfig.setting.key ?? dialogConfig.setting.label}
-            visible={dialogConfig.visible}
-            onClose={handleCloseDialog}
-            onSave={async (value) => {
-              if (!dialogConfig.setting) {
-                return;
-              }
-
-              try {
-                if (dialogConfig.setting.onSave) {
-                  await dialogConfig.setting.onSave(value);
-                } else if (dialogConfig.setting.key) {
-                  await handleSettingsChange(
-                    { [dialogConfig.setting.key]: value } as Partial<typeof modelSettings>
-                  );
-                }
-                handleCloseDialog();
-              } catch (error) {
-                showDialog('Error', 'Failed to save setting');
-              }
-            }}
-            defaultValue={
-              dialogConfig.setting.defaultValue ??
-              getDefaultValueForKey(dialogConfig.setting.key) ??
-              dialogConfig.setting.value
-            }
-            label={dialogConfig.setting.label}
-            value={dialogConfig.setting.value}
-            minimumValue={dialogConfig.setting.minimumValue}
-            maximumValue={dialogConfig.setting.maximumValue}
-            step={dialogConfig.setting.step}
-            description={dialogConfig.setting.description}
-            />
-          )}
-
-        <StopWordsDialog
-          visible={showStopWordsDialog}
-          onClose={() => setShowStopWordsDialog(false)}
-          onSave={(stopWords) => {
-            handleSettingsChange({ stopWords });
-            setShowStopWordsDialog(false);
-          }}
-          value={modelSettings.stopWords}
-          defaultValue={DEFAULT_SETTINGS.stopWords}
-          description="Enter words that will cause the model to stop generating. Each word should be on a new line. The model will stop when it generates any of these words."
-        />
-
         <SystemPromptDialog
           visible={showSystemPromptDialog}
           onClose={() => setShowSystemPromptDialog(false)}
