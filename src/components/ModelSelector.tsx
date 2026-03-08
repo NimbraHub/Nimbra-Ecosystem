@@ -158,7 +158,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       setDialogMessage(message);
       const autoClose = () => setDialogVisible(false);
       setDialogPrimaryText(primary?.label ?? 'OK');
-      setDialogPrimaryPress(primary ? () => primary.onPress : autoClose);
+      setDialogPrimaryPress(() => (primary ? primary.onPress : autoClose));
       setDialogSecondaryText(secondary?.label);
       setDialogSecondaryPress(secondary ? () => secondary.onPress : undefined);
       setDialogVisible(true);
