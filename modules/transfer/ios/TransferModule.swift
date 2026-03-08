@@ -316,12 +316,11 @@ private class SessionDelegate: NSObject, URLSessionDownloadDelegate {
 
   func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
     DispatchQueue.main.async {
-      if let appDelegate = UIApplication.shared.delegate,
-         let handler = appDelegate.perform(
-           Selector(("backgroundSessionCompletionHandler"))
-         )?.takeUnretainedValue() as? (() -> Void) {
-        handler()
-      }
+      NotificationCenter.default.post(
+        name: Notification.Name("com.inferra.bgdownload.sessionFinished"),
+        object: nil,
+        userInfo: ["identifier": TransferModule.sessionId]
+      )
     }
   }
 }
