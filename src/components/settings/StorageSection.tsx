@@ -7,17 +7,15 @@ import SettingsSection from './SettingsSection';
 import { getThemeAwareColor } from '../../utils/ColorUtils';
 
 type StorageInfo = {
-  tempSize: string;
   cacheSize: string;
 };
 
-type ClearingType = 'cache' | 'temp' | 'models' | null;
+type ClearingType = 'cache' | 'models' | null;
 
 type StorageSectionProps = {
   storageInfo: StorageInfo;
   clearingType: ClearingType;
   onClearCache: () => void;
-  onClearTempFiles: () => void;
   onClearAllModels: () => void;
 };
 
@@ -25,7 +23,6 @@ const StorageSection = ({
   storageInfo,
   clearingType,
   onClearCache,
-  onClearTempFiles,
   onClearAllModels
 }: StorageSectionProps) => {
   const { theme: currentTheme } = useTheme();
@@ -53,31 +50,6 @@ const StorageSection = ({
           </View>
         </View>
         {clearingType === 'cache' ? (
-          <ActivityIndicator size="small" color={themeColors.primary} />
-        ) : (
-          <MaterialCommunityIcons name="chevron-right" size={20} color={themeColors.secondaryText} />
-        )}
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={[styles.settingItem, styles.settingItemBorder]}
-        onPress={onClearTempFiles}
-        disabled={clearingType !== null}
-      >
-        <View style={styles.settingLeft}>
-          <View style={[styles.iconContainer, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}>
-            <MaterialCommunityIcons name="folder-outline" size={22} color={iconColor} />
-          </View>
-          <View style={styles.settingTextContainer}>
-            <Text style={[styles.settingText, { color: themeColors.text }]}>
-              Clear Temporary Files
-            </Text>
-            <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
-              {storageInfo.tempSize} of temporary data
-            </Text>
-          </View>
-        </View>
-        {clearingType === 'temp' ? (
           <ActivityIndicator size="small" color={themeColors.primary} />
         ) : (
           <MaterialCommunityIcons name="chevron-right" size={20} color={themeColors.secondaryText} />
