@@ -4,7 +4,7 @@
   from the Model Settings section on the Settings screen.
 */
 import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, Text } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -169,6 +169,23 @@ export default function ModelParametersScreen({ navigation }: Props) {
       />
 
       <ScrollView contentContainerStyle={styles.content}>
+        <View style={[
+          styles.noticeBanner,
+          {
+            backgroundColor: currentTheme === 'dark' ? 'rgba(255,176,0,0.1)' : 'rgba(255,152,0,0.08)',
+            borderColor: currentTheme === 'dark' ? 'rgba(255,176,0,0.25)' : 'rgba(255,152,0,0.3)',
+          },
+        ]}>
+          <MaterialCommunityIcons
+            name="information-outline"
+            size={16}
+            color={currentTheme === 'dark' ? '#FFB300' : '#E65100'}
+          />
+          <Text style={[styles.noticeText, { color: currentTheme === 'dark' ? '#FFB300' : '#E65100' }]}>
+            These settings apply to local models only and have no effect on Apple Intelligence or remote/cloud models.
+          </Text>
+        </View>
+
         <ModelSettingsSampling
           modelSettings={settings}
           defaultSettings={DEFAULT_SETTINGS}
@@ -341,5 +358,22 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: 32,
     paddingTop: 12,
+  },
+  noticeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginHorizontal: 16,
+    marginBottom: 8,
+  },
+  noticeText: {
+    fontSize: 13,
+    fontWeight: '500',
+    flex: 1,
+    lineHeight: 18,
   },
 });
