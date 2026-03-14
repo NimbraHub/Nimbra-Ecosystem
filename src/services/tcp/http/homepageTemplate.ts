@@ -160,10 +160,72 @@ export function getHomepageHTML(): string {
     <p class="subtitle">Complete API reference for local AI inference</p>
 
     <div class="nav">
+      <button class="nav-btn" onclick="document.getElementById('openai').scrollIntoView({behavior:'smooth'})">OpenAI Compatible</button>
       <button class="nav-btn" onclick="document.getElementById('chat').scrollIntoView({behavior:'smooth'})">Chat</button>
       <button class="nav-btn" onclick="document.getElementById('models').scrollIntoView({behavior:'smooth'})">Models</button>
       <button class="nav-btn" onclick="document.getElementById('rag').scrollIntoView({behavior:'smooth'})">RAG</button>
       <button class="nav-btn" onclick="document.getElementById('server').scrollIntoView({behavior:'smooth'})">Server</button>
+    </div>
+
+    <div id="openai" class="section">
+      <h2 class="section-title">OpenAI-Compatible API</h2>
+      <p style="color:#666;margin-bottom:20px;line-height:1.6;">Drop-in replacement for OpenAI API. Use these endpoints with any tool that supports custom OpenAI-compatible servers (Obsidian plugins, Continue, Open WebUI, etc). Set the base URL to <code>http://&lt;device-ip&gt;:8889/v1</code>. The <code>Authorization</code> header is accepted but not required.</p>
+
+      <div class="endpoint-card" style="border-left-color:#10b981;">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/v1/chat/completions</span>
+        </div>
+        <p class="endpoint-desc">Chat completions with streaming (SSE) support. Compatible with OpenAI client libraries and plugins.</p>
+        <div class="code-label">Request:</div>
+        <pre class="code-block">{
+  "model": "llama-3.2-1b",
+  "messages": [
+    {"role": "system", "content": "You are a helpful assistant"},
+    {"role": "user", "content": "Hello!"}
+  ],
+  "stream": true,
+  "temperature": 0.7,
+  "max_tokens": 1024
+}</pre>
+        <div class="code-label">Response (streaming SSE):</div>
+        <pre class="code-block">data: {"id":"chatcmpl-...","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"Hi"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":" there!"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: [DONE]</pre>
+        <div class="code-label">Response (non-streaming):</div>
+        <pre class="code-block">{
+  "id": "chatcmpl-...",
+  "object": "chat.completion",
+  "model": "llama-3.2-1b",
+  "choices": [{
+    "index": 0,
+    "message": {"role": "assistant", "content": "Hi there!"},
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+}</pre>
+      </div>
+
+      <div class="endpoint-card" style="border-left-color:#10b981;">
+        <div class="endpoint-header">
+          <span class="method get">GET</span>
+          <span class="endpoint-path">/v1/models</span>
+        </div>
+        <p class="endpoint-desc">List available models in OpenAI format. Includes local GGUF models, Apple Foundation, and configured remote providers.</p>
+        <div class="code-label">Response:</div>
+        <pre class="code-block">{
+  "object": "list",
+  "data": [
+    {"id": "llama-3.2-1b", "object": "model", "owned_by": "local"},
+    {"id": "apple-foundation", "object": "model", "owned_by": "apple"},
+    {"id": "gemini", "object": "model", "owned_by": "remote"}
+  ]
+}</pre>
+      </div>
     </div>
 
     <div id="chat" class="section">
@@ -598,6 +660,7 @@ export function getHomepageHTML(): string {
 
     <div class="footer">
       <p style="margin-bottom: 10px;"><strong>Base URL:</strong> Use the server URL shown in the status section above</p>
+      <p style="margin-bottom: 10px;"><strong>OpenAI-Compatible Base URL:</strong> <code>http://&lt;device-ip&gt;:8889/v1</code></p>
       <p style="margin-bottom: 10px;"><strong>Headers:</strong> Content-Type: application/json</p>
       <p style="margin-bottom: 10px;"><strong>CORS:</strong> Enabled for all origins</p>
     </div>
