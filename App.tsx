@@ -29,6 +29,7 @@ import { DialogProvider } from './src/context/DialogContext';
 import { ShowDialog } from './src/components/ShowDialog';
 import { initializeBindings } from './src/utils/llamaBinding';
 import UpdateDialog from './src/components/UpdateDialog';
+import { updateService } from './src/services/UpdateService';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -259,11 +260,27 @@ export default function App() {
     'OpenSans-Bold': require('./assets/fonts/OpenSans-Bold.ttf'),
     'OpenSans-ExtraBold': require('./assets/fonts/OpenSans-ExtraBold.ttf'),
   });
+  const [autoUpdated, setAutoUpdated] = useState(false);
+
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    async function handleAutoUpdate() {
+      const result = await updateService.checkForUpdate();
+      if (result?.manifest && updateService.isAutoUpdate(result.manifest)) {
+        try {
+          await updateService.fetchAndReload();
+          return;
+        } catch {}
+      }
+      setAutoUpdated(true);
+    }
+    handleAutoUpdate();
+  }, []);
+
+  useEffect(() => {
+    if ((fontsLoaded || fontError) && autoUpdated) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, fontError]);
+  }, [fontsLoaded, fontError, autoUpdated]);
 
   useEffect(() => {
     if (fontsLoaded) {
