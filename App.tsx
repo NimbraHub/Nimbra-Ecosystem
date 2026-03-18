@@ -289,10 +289,6 @@ export default function App() {
     }
   }, [fontsLoaded, fontError, updateChecked]);
 
-  if (isUpdating) {
-    return <UpdateScreen />;
-  }
-
   useEffect(() => {
     if (fontsLoaded) {
       const oldTextRender = Text.render;
@@ -313,6 +309,10 @@ export default function App() {
       };
     }
   }, [fontsLoaded]);
+
+  if (isUpdating) {
+    return <UpdateScreen />;
+  }
 
   if (!fontsLoaded && !fontError) {
     return null;
