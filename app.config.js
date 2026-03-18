@@ -97,6 +97,7 @@ export default {
       ]
     },
     extra: {
+      autoUpdate: false,
       changelog: [
         "OpenAI-compatible API endpoints (/v1/chat/completions, /v1/models)",
         "Fixed connection issues with PC clients",
