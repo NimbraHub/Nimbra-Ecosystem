@@ -67,22 +67,22 @@ export default function UpdateDialog() {
 
   return (
     <Dialog visible={visible} onDismiss={handleClose}>
-      <TouchableOpacity
-        style={styles.closeBtn}
-        onPress={handleClose}
-        disabled={installing}
-        hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-      >
-        <MaterialCommunityIcons
-          name="close"
-          size={20}
-          color={themeColors.secondaryText}
-        />
-      </TouchableOpacity>
-
-      <Text style={[styles.title, { color: themeColors.text }]}>
-        Update Available
-      </Text>
+      <View style={styles.titleRow}>
+        <Text style={[styles.title, { color: themeColors.text }]}>
+          Update Available
+        </Text>
+        <TouchableOpacity
+          onPress={handleClose}
+          disabled={installing}
+          hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+        >
+          <MaterialCommunityIcons
+            name="close"
+            size={20}
+            color={themeColors.secondaryText}
+          />
+        </TouchableOpacity>
+      </View>
 
       {changelog.length > 0 ? (
         <ScrollView style={styles.changelog} nestedScrollEnabled>
@@ -161,18 +161,16 @@ export default function UpdateDialog() {
 }
 
 const styles = StyleSheet.create({
-  closeBtn: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    zIndex: 1,
-    padding: 4,
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
   title: {
     fontSize: 20,
     fontWeight: '600',
-    marginBottom: 16,
-    marginRight: 24,
+    flex: 1,
   },
   label: {
     fontSize: 13,
