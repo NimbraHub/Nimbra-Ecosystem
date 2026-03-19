@@ -4,7 +4,17 @@ import { initializeAuth, browserLocalPersistence, getReactNativePersistence } fr
 import { getFirestore } from 'firebase/firestore';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-const extra = Constants.expoConfig?.extra;
+import * as Updates from 'expo-updates';
+
+function getExtra() {
+  const primary = Constants.expoConfig?.extra;
+  if (primary?.FIREBASE_API_KEY) return primary;
+  const ota = (Updates as any).manifest?.extra?.expoClient?.extra;
+  if (ota?.FIREBASE_API_KEY) return ota;
+  return primary ?? {};
+}
+
+const extra = getExtra();
 const firebaseConfig = {
   apiKey: extra?.FIREBASE_API_KEY,
   authDomain: extra?.FIREBASE_AUTH_DOMAIN,

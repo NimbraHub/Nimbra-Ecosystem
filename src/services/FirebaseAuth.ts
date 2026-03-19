@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import * as Updates from 'expo-updates';
 import {
   signInWithCredential,
   GoogleAuthProvider,
@@ -96,7 +97,9 @@ export const isFirebaseReady = (): boolean => {
 export const initializeFirebase = async (): Promise<void> => {
   if (isFirebaseInitialized) return;
 
-  const extra = Constants.expoConfig?.extra;
+  const primary = Constants.expoConfig?.extra;
+  const ota = (Updates as any).manifest?.extra?.expoClient?.extra;
+  const extra = primary?.GOOGLE_SIGN_IN_WEB_CLIENT_ID ? primary : (ota ?? primary ?? {});
 
   if (!extra?.GOOGLE_SIGN_IN_WEB_CLIENT_ID) {
     throw new Error('Google Sign-In Web Client ID not configured');
