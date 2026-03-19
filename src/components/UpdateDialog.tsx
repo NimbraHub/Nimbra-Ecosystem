@@ -163,8 +163,8 @@ export default function UpdateDialog() {
 const styles = StyleSheet.create({
   closeBtn: {
     position: 'absolute',
-    top: -8,
-    right: -8,
+    top: 0,
+    right: 0,
     zIndex: 1,
     padding: 4,
   },
