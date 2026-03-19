@@ -1,5 +1,4 @@
 # Files and directories that will be excluded from EAS builds
-# This reduces build size and speeds up the build process
 
 # Development directories
 node_modules/
@@ -7,9 +6,9 @@ node_modules/
 .vscode/
 .idea/
 
-# Native folders
-android/
-ios/
+# Native folders (root-level only)
+/android/
+/ios/
 
 # Build artifacts
 dist/
