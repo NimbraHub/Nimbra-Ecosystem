@@ -1,7 +1,7 @@
 
 ## InferrLM (Previously Inferra)
 <p>
-  <a href="" target="_blank"><img src="https://img.shields.io/badge/App_Version-0.8.3-6a1b9a" alt="App Version 0.8.3"></a>
+  <a href="" target="_blank"><img src="https://img.shields.io/badge/App_Version-0.8.4-6a1b9a" alt="App Version 0.8.4"></a>
   <a href="https://opensource.org/licenses/AGPL-3.0" target="_blank"><img src="https://img.shields.io/badge/License-AGPL--3.0-orange" alt="License: AGPL-3.0"></a>
 </p>
 <p>
@@ -11,7 +11,6 @@
 InferrLM is a mobile application that brings LLMs & SLMs directly to your Android & iOS device and lets your device act as a local server. Cloud-based models like Claude, Gemini and ChatGPT are also supported. File attachments with RAG are also well-supported for local models.
 
 <p>
-  <a href="#"><img src="https://upload.wikimedia.org/wikipedia/commons/0/0d/Get_it_on_F-Droid.svg" alt="Get it on F-Droid" width="150" style="vertical-align:middle"></a>
   <a href="https://play.google.com/store/apps/details?id=com.gorai.ragionare"><img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Get it on Google Play" width="178" style="vertical-align:middle"></a>
   <a href="https://apps.apple.com/us/app/inferra/id6754396856"><img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" width="164" style="vertical-align:middle"></a>
 </p>
