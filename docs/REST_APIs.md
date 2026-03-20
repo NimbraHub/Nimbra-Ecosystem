@@ -14,19 +14,9 @@ Complete API reference for InferrLM's local HTTP server that exposes AI inferenc
 
 ### Configuration Options
 
-The server includes several configuration options:
-
 - **Auto-start**: Automatically start the server when the app launches
 - **Network Access**: Control whether external devices can access the server
 - **Port**: Default port is 8889 (configurable in settings)
-
-### Accessing from Other Devices
-
-Once the server is running, you can access it from any device on the same WiFi network:
-
-- Open a web browser and navigate to the server URL
-- Use the API endpoints from your applications or scripts
-- View the interactive API documentation at the root URL (`http://YOUR_DEVICE_IP:8889`)
 
 ### Base Configuration
 
@@ -40,14 +30,13 @@ Every request that generates text includes a `model` string that determines whic
 
 | Model value | Routed backend | Notes |
 |-------------|----------------|-------|
-| Stored model name (for example `llama-3.2-1b`) | Local GGUF running on-device | Download the GGUF via the InferrLM app and load it if you plan to stream responses repeatedly. |
-| `apple-foundation` | Apple Intelligence Foundation model | Available on iOS 26+ devices that have enabled Apple Foundation inside the app (`/api/models/apple-foundation`). |
-| `gemini` | Google Gemini via your API key | Configure with `/api/models/remote` (`provider: "gemini"`) and enable remote models before sending requests. |
-| `chatgpt` | OpenAI ChatGPT or GPT-4o | Configure with `provider: "chatgpt"` plus your OpenAI key. |
-| `claude` | Anthropic Claude | Configure with `provider: "claude"` and an Anthropic key. |
-| `deepseek` | DeepSeek API | Configure with `provider: "deepseek"` and an API key. |
+| Stored model name (e.g. `llama-3.2-1b.gguf`) | Local GGUF running on-device | Download the GGUF via the InferrLM app first. |
+| `apple-foundation` | Apple Intelligence Foundation model | iOS only. Enable in app settings and verify via `GET /api/models/apple-foundation`. |
+| `gemini` | Google Gemini via your API key | Add your Gemini API key in app settings and enable remote models. |
+| `chatgpt` | OpenAI ChatGPT / GPT-4o | Add your OpenAI API key in app settings and enable remote models. |
+| `claude` | Anthropic Claude | Add your Anthropic API key in app settings and enable remote models. |
 
-Remote providers share the same NDJSON streaming responses as local models. If remote models are disabled or an API key has not been saved, the server responds with `remote_models_disabled` or `api_key_missing`, so make sure the InferrLM settings page shows the provider as configured before calling `/api/chat` or `/api/generate`.
+Remote providers use the same NDJSON streaming format as local models. If remote models are disabled or an API key has not been saved, the server responds with `remote_models_disabled` or `api_key_missing`. API keys and remote model settings are configured in the InferrLM app settings — they cannot be set via the REST API.
 
 ---
 
@@ -55,64 +44,54 @@ Remote providers share the same NDJSON streaming responses as local models. If r
 
 ### POST /api/chat
 
-Stream chat completions with full conversation history support. Set the `model` field to a local GGUF name, `apple-foundation`, or one of the remote provider identifiers described above.
+Stream or complete a chat with full conversation history. Accepts local GGUF model names, `apple-foundation`, or remote provider identifiers.
 
 **Request Body:**
 ```json
 {
-  "model": "llama-3.2-1b",
+  "model": "llama-3.2-1b.gguf",
   "messages": [
     {"role": "system", "content": "You are a helpful assistant"},
     {"role": "user", "content": "Hello!"}
   ],
   "stream": true,
-  "temperature": 0.7
+  "temperature": 0.7,
+  "max_tokens": 512
 }
 ```
 
-**Request Body (Apple Foundation, streaming):**
+**Streaming Response (NDJSON):**
+```
+{"model":"llama-3.2-1b.gguf","created_at":"...","message":{"role":"assistant","content":"Hi"},"done":false}
+{"model":"llama-3.2-1b.gguf","created_at":"...","message":{"role":"assistant","content":" there"},"done":false}
+{"model":"llama-3.2-1b.gguf","created_at":"...","message":{"role":"assistant","content":""},"done":true}
+```
+
+**Non-streaming Response:**
 ```json
 {
-  "model": "apple-foundation",
-  "messages": [
-    {"role": "user", "content": "Summarize this meeting"}
-  ],
-  "stream": true
+  "model": "llama-3.2-1b.gguf",
+  "created_at": "2026-03-20T10:00:00.000Z",
+  "message": {"role": "assistant", "content": "Hi there!"},
+  "done": true
 }
-```
-
-**Request Body (remote provider, non-streaming):**
-```json
-{
-  "model": "gemini",
-  "messages": [
-    {"role": "system", "content": "You are a travel assistant"},
-    {"role": "user", "content": "Plan a 3 day trip to Tokyo"}
-  ],
-  "stream": false
-}
-```
-
-**Response (streaming):**
-```json
-{"message": {"role": "assistant", "content": "Hi"}, "done": false}
-{"message": {"role": "assistant", "content": " there"}, "done": false}
-{"message": {"role": "assistant", "content": "!"}, "done": true}
 ```
 
 **Parameters:**
-- `model` (string, required): Target backend (`apple-foundation`, `gemini`, `chatgpt`, `claude`, `deepseek`, or any stored model name)
-- `messages` (array, required): Conversation history with role and content
-- `stream` (boolean, optional): Enable streaming responses (default: true)
-- `temperature` (number, optional): Sampling temperature 0.0-2.0 (default: 0.7)
+- `model` (string, required): Target backend
+- `messages` (array, required): Conversation history — each entry has `role` (`system` | `user` | `assistant`) and `content`
+- `stream` (boolean, optional): Enable streaming NDJSON responses (default: `true`)
+- `temperature` (number, optional): Sampling temperature 0.0–2.0
 - `max_tokens` (number, optional): Maximum tokens to generate
+- `top_p` (number, optional): Top-p nucleus sampling
+- `top_k` (number, optional): Top-k sampling
 
 **Example:**
 ```bash
 curl -X POST http://YOUR_DEVICE_IP:8889/api/chat \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "chatgpt",
+    "model": "llama-3.2-1b.gguf",
     "messages": [{"role": "user", "content": "Explain AI"}],
     "stream": false
   }'
@@ -122,40 +101,32 @@ curl -X POST http://YOUR_DEVICE_IP:8889/api/chat \
 
 ### POST /api/generate
 
-Generate completion from a single prompt without conversation context. Provide the `model` string for a local GGUF, `apple-foundation`, or a remote provider identifier.
+Generate a completion from a single prompt (no conversation context).
 
 **Request Body:**
 ```json
 {
-  "model": "llama-3.2-1b",
+  "model": "llama-3.2-1b.gguf",
   "prompt": "Explain quantum computing in simple terms",
   "stream": false,
   "max_tokens": 500
 }
 ```
 
-**Request Body (remote provider, streaming):**
-```json
-{
-  "model": "claude",
-  "prompt": "Write a haiku about the ocean",
-  "stream": true
-}
-```
-
 **Response:**
 ```json
 {
+  "model": "llama-3.2-1b.gguf",
+  "created_at": "2026-03-20T10:00:00.000Z",
   "response": "Quantum computing uses quantum mechanics principles...",
-  "done": true,
-  "context": [...]
+  "done": true
 }
 ```
 
 **Parameters:**
-- `model` (string, required): Backend identifier (`apple-foundation`, `gemini`, `chatgpt`, `claude`, `deepseek`, or stored model name)
-- `prompt` (string, required): Input prompt for generation
-- `stream` (boolean, optional): Enable streaming responses
+- `model` (string, required): Target backend
+- `prompt` (string, required): Input prompt
+- `stream` (boolean, optional): Enable streaming NDJSON responses
 - `max_tokens` (number, optional): Maximum tokens to generate
 - `temperature` (number, optional): Sampling temperature
 
@@ -163,28 +134,107 @@ Generate completion from a single prompt without conversation context. Provide t
 ```bash
 curl -X POST http://YOUR_DEVICE_IP:8889/api/generate \
   -H "Content-Type: application/json" \
-  -d '{"model": "apple-foundation", "prompt": "Hello world", "stream": false}'
+  -d '{"model": "llama-3.2-1b.gguf", "prompt": "Hello world", "stream": false}'
 ```
 
 ---
 
+## OpenAI-Compatible API
+
+### GET /v1/models
+
+List available models in OpenAI format. Compatible with any OpenAI client library.
+
+**Response:**
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "llama-3.2-1b.gguf",
+      "object": "model",
+      "created": 1700000000,
+      "owned_by": "local"
+    }
+  ]
+}
+```
+
+**Example:**
+```bash
+curl http://YOUR_DEVICE_IP:8889/v1/models
+```
+
+---
+
+### POST /v1/chat/completions
+
+OpenAI-compatible chat completions endpoint. Drop-in replacement for apps built against the OpenAI API. No API key is required — set any non-empty placeholder in the `Authorization` header if your client requires one.
+
+**Request Body:**
+```json
+{
+  "model": "llama-3.2-1b.gguf",
+  "messages": [
+    {"role": "user", "content": "Hello!"}
+  ],
+  "stream": false,
+  "max_tokens": 100
+}
+```
+
+**Non-streaming Response:**
+```json
+{
+  "id": "chatcmpl-...",
+  "object": "chat.completion",
+  "created": 1700000000,
+  "model": "llama-3.2-1b.gguf",
+  "choices": [
+    {
+      "index": 0,
+      "message": {"role": "assistant", "content": "Hi there!"},
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+}
+```
+
+**Streaming Response (SSE):**
+```
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","created":...,"model":"llama-3.2-1b.gguf","choices":[{"index":0,"delta":{"content":"Hi"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","created":...,"model":"llama-3.2-1b.gguf","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: [DONE]
+```
+
+**Example:**
+```bash
+curl -X POST http://YOUR_DEVICE_IP:8889/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "llama-3.2-1b.gguf", "messages": [{"role": "user", "content": "Hi"}], "stream": false}'
+```
+
+---
+
+## Chat History
+
 ### GET /api/chats
 
-List all saved chat conversations.
+List all saved chat conversations (without messages).
 
 **Response:**
 ```json
 {
   "chats": [
     {
-      "id": "chat-1",
+      "id": "chat-abc123",
       "title": "Quantum Physics Discussion",
-      "updated": "2025-10-23T10:30:00Z"
-    },
-    {
-      "id": "chat-2",
-      "title": "Cooking Tips",
-      "updated": "2025-10-22T15:20:00Z"
+      "timestamp": 1700000000000,
+      "modelPath": "/path/to/model.gguf",
+      "messageCount": 12
     }
   ]
 }
@@ -199,23 +249,131 @@ curl http://YOUR_DEVICE_IP:8889/api/chats
 
 ### POST /api/chats
 
-Create or update a chat conversation.
+Create a new chat conversation.
 
 **Request Body:**
 ```json
 {
-  "id": "chat-1",
   "title": "My Conversation",
-  "messages": [...]
+  "messages": [
+    {"role": "user", "content": "Hello"},
+    {"role": "assistant", "content": "Hi there!"}
+  ]
 }
 ```
+
+**Response (201):**
+```json
+{
+  "chat": {
+    "id": "chat-abc123",
+    "title": "My Conversation",
+    "timestamp": 1700000000000,
+    "modelPath": null,
+    "messageCount": 2,
+    "messages": [...]
+  }
+}
+```
+
+**Parameters:**
+- `title` (string, optional): Chat title
+- `messages` (array, optional): Initial messages to seed the conversation
+
+---
+
+### GET /api/chats/:id
+
+Get a specific chat including all messages.
 
 **Response:**
 ```json
 {
-  "success": true,
-  "id": "chat-1"
+  "chat": {
+    "id": "chat-abc123",
+    "title": "My Conversation",
+    "timestamp": 1700000000000,
+    "modelPath": null,
+    "messageCount": 4,
+    "messages": [...]
+  }
 }
+```
+
+**Example:**
+```bash
+curl http://YOUR_DEVICE_IP:8889/api/chats/chat-abc123
+```
+
+---
+
+### DELETE /api/chats/:id
+
+Delete a chat conversation.
+
+**Response:**
+```json
+{
+  "status": "deleted",
+  "chatId": "chat-abc123"
+}
+```
+
+**Example:**
+```bash
+curl -X DELETE http://YOUR_DEVICE_IP:8889/api/chats/chat-abc123
+```
+
+---
+
+### GET /api/chats/:id/messages
+
+Get only the messages for a specific chat.
+
+**Response:**
+```json
+{
+  "messages": [
+    {"id": "msg-1", "role": "user", "content": "Hello"},
+    {"id": "msg-2", "role": "assistant", "content": "Hi there!"}
+  ]
+}
+```
+
+**Example:**
+```bash
+curl http://YOUR_DEVICE_IP:8889/api/chats/chat-abc123/messages
+```
+
+---
+
+### POST /api/chats/:id/messages
+
+Append one or more messages to an existing chat.
+
+**Request Body:**
+```json
+{
+  "messages": [
+    {"role": "user", "content": "Follow-up question"}
+  ]
+}
+```
+
+**Response (201):**
+```json
+{
+  "messages": [
+    {"id": "msg-3", "role": "user", "content": "Follow-up question"}
+  ]
+}
+```
+
+**Example:**
+```bash
+curl -X POST http://YOUR_DEVICE_IP:8889/api/chats/chat-abc123/messages \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "Follow-up"}]}'
 ```
 
 ---
@@ -224,16 +382,17 @@ Create or update a chat conversation.
 
 ### GET /api/tags
 
-List all available models in the local storage.
+List all models stored on the device.
 
 **Response:**
 ```json
 {
   "models": [
     {
-      "name": "llama-3.2-1b",
-      "modified_at": "2025-10-20T10:00:00Z",
+      "name": "llama-3.2-1b.gguf",
+      "modified_at": "2026-03-20T10:00:00.000Z",
       "size": 1234567890,
+      "digest": null,
       "model_type": "llama",
       "is_external": false
     }
@@ -250,22 +409,25 @@ curl http://YOUR_DEVICE_IP:8889/api/tags
 
 ### GET /api/ps
 
-List currently loaded models in memory.
+List currently loaded models (models in memory).
 
 **Response:**
 ```json
 {
   "models": [
     {
-      "name": "llama-3.2-1b",
+      "name": "llama-3.2-1b.gguf",
       "model": "/path/to/model.gguf",
       "size": 1234567890,
-      "loaded_at": "2025-10-23T10:00:00Z",
-      "is_external": false
+      "loaded_at": "2026-03-20T10:00:00.000Z",
+      "is_external": false,
+      "model_type": "llama"
     }
   ]
 }
 ```
+
+Returns an empty `models` array when no model is loaded.
 
 **Example:**
 ```bash
@@ -276,25 +438,36 @@ curl http://YOUR_DEVICE_IP:8889/api/ps
 
 ### POST /api/show
 
-Get detailed information about a specific model including architecture, parameters, and configuration.
+Get detailed information about a specific model including GGUF metadata and current settings.
 
-**Request Body:**
+**Request Body** (use `name`, `model`, or `path`):
 ```json
 {
-  "model": "llama-3.2-1b"
+  "model": "llama-3.2-1b.gguf"
 }
 ```
 
 **Response:**
 ```json
 {
-  "modelinfo": {
-    "general.architecture": "llama",
-    "general.file_type": "GGUF",
-    "general.parameter_count": 1000000000
+  "name": "llama-3.2-1b.gguf",
+  "path": "/path/to/model.gguf",
+  "size": 1234567890,
+  "modified_at": "2026-03-20T10:00:00.000Z",
+  "is_external": false,
+  "model_type": "llama",
+  "capabilities": ["completion"],
+  "multimodal": false,
+  "default_projection_model": null,
+  "settings": {
+    "temperature": 0.7,
+    "topP": 0.9,
+    "maxTokens": 2048
   },
-  "parameters": "temperature=0.7\ntop_p=0.9",
-  "template": "{{.System}}\n{{.Prompt}}"
+  "info": {
+    "general.architecture": "llama",
+    "general.parameter_count": 1000000000
+  }
 }
 ```
 
@@ -302,19 +475,19 @@ Get detailed information about a specific model including architecture, paramete
 ```bash
 curl -X POST http://YOUR_DEVICE_IP:8889/api/show \
   -H "Content-Type: application/json" \
-  -d '{"model": "llama-3.2-1b"}'
+  -d '{"model": "llama-3.2-1b.gguf"}'
 ```
 
 ---
 
 ### POST /api/pull
 
-Download a model from a URL.
+Download a model from a URL directly to the device.
 
 **Request Body:**
 ```json
 {
-  "url": "https://example.com/model.gguf",
+  "url": "https://huggingface.co/model.gguf",
   "model": "my-custom-model"
 }
 ```
@@ -324,46 +497,49 @@ Download a model from a URL.
 {
   "status": "downloading",
   "model": "my-custom-model",
-  "downloadId": "download-123"
+  "downloadId": "download-abc123"
 }
 ```
+
+The download runs in the background. Use `GET /api/tags` to check when the model appears.
 
 **Example:**
 ```bash
 curl -X POST http://YOUR_DEVICE_IP:8889/api/pull \
   -H "Content-Type: application/json" \
-  -d '{
-    "url": "https://huggingface.co/model.gguf",
-    "model": "my-model"
-  }'
+  -d '{"url": "https://huggingface.co/model.gguf", "model": "my-model"}'
 ```
 
 ---
 
 ### POST /api/copy
 
-Create a copy of an existing model with a new name.
+Copy an existing model file under a new name.
 
 **Request Body:**
 ```json
 {
-  "source": "llama-3.2-1b",
-  "destination": "llama-3.2-1b-backup"
+  "source": "llama-3.2-1b.gguf",
+  "destination": "llama-3.2-1b-backup.gguf"
 }
 ```
 
 **Response:**
 ```json
 {
-  "success": true
+  "status": "copied",
+  "source": "llama-3.2-1b.gguf",
+  "destination": "llama-3.2-1b-backup.gguf"
 }
 ```
+
+Returns `409` if the destination name already exists. External models cannot be copied.
 
 **Example:**
 ```bash
 curl -X POST http://YOUR_DEVICE_IP:8889/api/copy \
   -H "Content-Type: application/json" \
-  -d '{"source": "llama-3.2-1b", "destination": "llama-backup"}'
+  -d '{"source": "llama-3.2-1b.gguf", "destination": "llama-backup.gguf"}'
 ```
 
 ---
@@ -372,10 +548,10 @@ curl -X POST http://YOUR_DEVICE_IP:8889/api/copy \
 
 Delete a model from local storage.
 
-**Request Body:**
+**Request Body** (use `name` or `path`):
 ```json
 {
-  "name": "llama-3.2-1b"
+  "name": "llama-3.2-1b.gguf"
 }
 ```
 
@@ -397,50 +573,58 @@ curl -X DELETE http://YOUR_DEVICE_IP:8889/api/delete \
 
 ### POST /api/models
 
-Manage model operations: load, unload, reload, or refresh the model list.
+Perform model lifecycle operations.
 
-**Request Body (refresh):**
-```json
-{
-  "action": "refresh"
-}
-```
-
-**Request Body (load/unload):**
+**Request Body:**
 ```json
 {
   "action": "load",
-  "model": "llama-3.2-1b"
-}
-```
-
-**Response:**
-```json
-{
-  "status": "refreshed",
-  "count": 5,
-  "models": [...]
+  "model": "llama-3.2-1b.gguf"
 }
 ```
 
 **Available Actions:**
-- `refresh`: Reload the model list from storage
-- `load`: Load a specific model into memory
-- `unload`: Unload a model from memory
-- `reload`: Reload a currently loaded model
+
+| Action | Description | `model` field |
+|--------|-------------|---------------|
+| `load` | Load a model into memory | Required — model name or path |
+| `unload` | Release the currently loaded model | Not used |
+| `reload` | Reinitialise the currently loaded model | Not used |
+| `refresh` | Rescan storage and reload the model list | Not used |
+
+**Response (`load`):**
+```json
+{
+  "status": "loaded",
+  "model": {
+    "name": "llama-3.2-1b.gguf",
+    "path": "/path/to/model.gguf",
+    "projector": null
+  }
+}
+```
+
+**Response (`refresh`):**
+```json
+{
+  "status": "refreshed",
+  "count": 3,
+  "models": [...]
+}
+```
 
 **Example:**
 ```bash
 curl -X POST http://YOUR_DEVICE_IP:8889/api/models \
   -H "Content-Type: application/json" \
-  -d '{"action": "load", "model": "llama-3.2-1b"}'
+  -d '{"action": "load", "model": "llama-3.2-1b.gguf"}'
 ```
 
 ---
 
 ### GET /api/models/apple-foundation
 
-Check Apple Foundation model availability and status (iOS only).
+Check Apple Foundation model availability and readiness (iOS only).
 
 **Response:**
 ```json
@@ -453,6 +637,11 @@ Check Apple Foundation model availability and status (iOS only).
 }
 ```
 
+| `status` | Meaning |
+|----------|---------|
+| `ready` | Available and enabled — use `model: "apple-foundation"` in requests |
+| `configure` | Not available or not enabled — see `message` for details |
+
 **Example:**
 ```bash
 curl http://YOUR_DEVICE_IP:8889/api/models/apple-foundation
@@ -462,41 +651,35 @@ curl http://YOUR_DEVICE_IP:8889/api/models/apple-foundation
 
 ### POST /api/models/apple-foundation
 
-Configure Apple Foundation model settings (iOS only).
+Verify that Apple Foundation is ready to process requests. Returns an error if not available, requirements are not met, or the feature is not enabled in app settings.
 
-**Request Body:**
+**Response (ready):**
 ```json
 {
-  "enabled": true,
-  "model": "gpt-4o"
+  "status": "ready"
 }
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "enabled": true,
-  "model": "gpt-4o"
-}
-```
+**Error responses:**
+- `501` — `apple_foundation_unavailable`: device does not support Apple Intelligence
+- `428` — `requirements_not_met`: device needs to be updated
+- `409` — `apple_foundation_disabled`: enable it in app settings first
 
 **Example:**
 ```bash
-curl -X POST http://YOUR_DEVICE_IP:8889/api/models/apple-foundation \
-  -H "Content-Type: application/json" \
-  -d '{"enabled": true, "model": "gpt-4o"}'
+curl -X POST http://YOUR_DEVICE_IP:8889/api/models/apple-foundation
 ```
 
 ---
 
-### GET /api/models/remote/status
+### GET /api/models/remote
 
-Get status of all configured remote model providers (OpenAI, Gemini, Anthropic, DeepSeek).
+Get the status of all configured remote model providers and whether remote models are enabled.
 
 **Response:**
 ```json
 {
+  "enabled": true,
   "providers": [
     {
       "provider": "gemini",
@@ -509,70 +692,106 @@ Get status of all configured remote model providers (OpenAI, Gemini, Anthropic, 
       "configured": false,
       "model": null,
       "usingDefault": false
+    },
+    {
+      "provider": "claude",
+      "configured": false,
+      "model": null,
+      "usingDefault": false
     }
-  ]
+  ],
+  "message": "Remote models are enabled."
 }
 ```
 
 **Example:**
 ```bash
-curl http://YOUR_DEVICE_IP:8889/api/models/remote/status
+curl http://YOUR_DEVICE_IP:8889/api/models/remote
+```
+
+---
+
+### GET /api/models/remote/:provider
+
+Get the status of a single remote provider (`gemini`, `chatgpt`, or `claude`).
+
+**Response:**
+```json
+{
+  "enabled": true,
+  "provider": {
+    "provider": "gemini",
+    "configured": true,
+    "model": "gemini-1.5-pro",
+    "usingDefault": false
+  },
+  "message": "Remote models are enabled."
+}
+```
+
+**Example:**
+```bash
+curl http://YOUR_DEVICE_IP:8889/api/models/remote/gemini
 ```
 
 ---
 
 ### POST /api/models/remote
 
-Configure remote model provider settings.
+Check whether a remote provider has an API key configured and is ready to accept requests. This does not configure the provider — API keys are set in the InferrLM app settings.
 
 **Request Body:**
 ```json
 {
-  "provider": "gemini",
-  "model": "gemini-1.5-pro",
-  "apiKey": "your-api-key-here"
+  "provider": "gemini"
 }
 ```
 
-**Response:**
+**Response (ready):**
 ```json
 {
-  "success": true,
-  "provider": "gemini",
-  "model": "gemini-1.5-pro",
-  "configured": true
+  "status": "ready",
+  "provider": {
+    "provider": "gemini",
+    "configured": true,
+    "model": "gemini-1.5-pro",
+    "usingDefault": false
+  }
 }
 ```
 
-**Supported Providers:**
-- `chatgpt`: OpenAI ChatGPT models
-- `gemini`: Google Gemini models
-- `claude`: Anthropic Claude models
-- `deepseek`: DeepSeek models
-
-Once configured, use these provider names directly in the `model` field when calling `/api/chat` or `/api/generate`.
+**Error responses:**
+- `409` — `remote_models_disabled`: enable remote models in app settings
+- `422` — `api_key_missing`: add the API key for this provider in app settings
 
 **Example:**
 ```bash
 curl -X POST http://YOUR_DEVICE_IP:8889/api/models/remote \
   -H "Content-Type: application/json" \
-  -d '{
-    "provider": "chatgpt",
-    "model": "gpt-4o",
-    "apiKey": "sk-..."
-  }'
+  -d '{"provider": "gemini"}'
+```
+
+---
+
+### POST /api/models/remote/:provider
+
+Same as `POST /api/models/remote` but the provider is specified in the path.
+
+**Example:**
+```bash
+curl -X POST http://YOUR_DEVICE_IP:8889/api/models/remote/claude
 ```
 
 ---
 
 ### GET /api/version
 
-Get the API version.
+Get the current app version.
 
 **Response:**
 ```json
 {
-  "version": "1.0.0"
+  "version": "0.8.3"
 }
 ```
 
@@ -587,13 +806,21 @@ curl http://YOUR_DEVICE_IP:8889/api/version
 
 ### POST /api/embeddings
 
-Generate embeddings for text using the specified model.
+Generate embeddings for one or more texts using a local model.
 
 **Request Body:**
 ```json
 {
-  "model": "llama-3.2-1b",
+  "model": "llama-3.2-1b.gguf",
   "input": "The quick brown fox jumps over the lazy dog"
+}
+```
+
+Pass an array to embed multiple texts in one request:
+```json
+{
+  "model": "llama-3.2-1b.gguf",
+  "input": ["First text", "Second text"]
 }
 ```
 
@@ -601,92 +828,90 @@ Generate embeddings for text using the specified model.
 ```json
 {
   "embeddings": [
-    [0.123, -0.456, 0.789, ...]
+    [0.123, -0.456, 0.789, "..."]
   ],
-  "model": "llama-3.2-1b"
+  "model": "llama-3.2-1b.gguf"
 }
 ```
 
 **Parameters:**
-- `model` (string, required): Name of the model to use for embeddings
-- `input` (string or array, required): Text or array of texts to embed
+- `model` (string, required): Local model to use for embedding
+- `input` (string or array, required): Text(s) to embed. Also accepted as `prompt` or `text`.
 
 **Example:**
 ```bash
 curl -X POST http://YOUR_DEVICE_IP:8889/api/embeddings \
   -H "Content-Type: application/json" \
-  -d '{"model": "llama-3.2-1b", "input": "Sample text"}'
+  -d '{"model": "llama-3.2-1b.gguf", "input": "Sample text"}'
 ```
 
 ---
 
 ### POST /api/files/ingest
 
-Ingest documents for RAG with support for multiple input methods.
+Ingest content into the RAG system. Accepts raw text, a file path on the device, or multiple file paths.
 
-**Request Body (direct content):**
+**Request Body (raw text):**
 ```json
 {
-  "content": "Document content to ingest for RAG queries..."
+  "content": "Document content to store for RAG...",
+  "fileName": "my-doc.txt"
 }
 ```
 
 **Request Body (single file path):**
 ```json
 {
-  "filePath": "/documents/doc1.pdf"
+  "filePath": "/path/to/doc.txt"
 }
 ```
 
-**Request Body (multiple files):**
+**Request Body (multiple file paths):**
 ```json
 {
-  "files": [
-    "/documents/doc1.pdf",
-    "/documents/doc2.txt",
-    "/documents/doc3.docx"
-  ]
+  "files": ["/path/to/doc1.txt", "/path/to/doc2.txt"]
 }
 ```
 
 **Response:**
 ```json
 {
-  "status": "success",
-  "processed": 2
+  "status": "stored",
+  "documentId": "1700000000000-abc123",
+  "fileName": "my-doc.txt",
+  "model": null
 }
 ```
 
-**Supported Formats:**
-- PDF documents
-- Text files (.txt)
-- Word documents (.docx)
-- Images (OCR will be performed)
+**Parameters:**
+- `content` (string): Raw text content *(required if `filePath` and `files` are omitted)*
+- `filePath` (string, optional): Absolute path to a file on the device
+- `files` (array, optional): Array of absolute file paths
+- `fileName` (string, optional): Display name for the document (default: `"uploaded.txt"`)
+- `chatId` (string, optional): Associate the document with a specific chat
+- `provider` (string, optional): RAG embedding provider
+- `rag` (boolean, optional): Set to `false` to skip RAG indexing (default: `true`)
 
 **Example:**
 ```bash
 curl -X POST http://YOUR_DEVICE_IP:8889/api/files/ingest \
   -H "Content-Type: application/json" \
-  -d '{"content": "Machine learning is a subset of AI..."}'
+  -d '{"content": "Machine learning is a subset of AI...", "fileName": "ml-intro.txt"}'
 ```
 
 ---
 
 ### GET /api/rag
 
-List all ingested documents in the RAG system.
+Get the current RAG system status.
 
 **Response:**
 ```json
 {
-  "documents": [
-    {
-      "id": "doc1",
-      "name": "doc1.pdf",
-      "chunks": 45,
-      "indexed": "2025-10-23T10:00:00Z"
-    }
-  ]
+  "enabled": true,
+  "ready": true,
+  "storage": "persistent",
+  "documentCount": 3
 }
 ```
 
@@ -699,43 +924,59 @@ curl http://YOUR_DEVICE_IP:8889/api/rag
 
 ### POST /api/rag
 
-Query ingested documents using RAG to find relevant context.
+Configure the RAG system (enable/disable, set storage type, or initialise).
 
 **Request Body:**
 ```json
 {
-  "query": "What is the main topic of the document?",
-  "top_k": 5
+  "enabled": true,
+  "storage": "persistent",
+  "initialize": true
 }
 ```
 
 **Response:**
 ```json
 {
-  "results": [
-    {
-      "text": "Relevant chunk from document 1",
-      "score": 0.92,
-      "source": "doc1.pdf"
-    },
-    {
-      "text": "Relevant chunk from document 2",
-      "score": 0.85,
-      "source": "doc2.pdf"
-    }
-  ]
+  "enabled": true,
+  "ready": true,
+  "storage": "persistent",
+  "documentCount": 0
 }
 ```
 
 **Parameters:**
-- `query` (string, required): The question or query to search for
-- `top_k` (number, optional): Number of top results to return (default: 5)
+- `enabled` (boolean, optional): Enable or disable RAG
+- `storage` (string, optional): `"memory"` or `"persistent"`
+- `initialize` (boolean, optional): Trigger RAG initialisation
+- `provider` (string, optional): Embedding provider to use on initialisation
 
 **Example:**
 ```bash
 curl -X POST http://YOUR_DEVICE_IP:8889/api/rag \
   -H "Content-Type: application/json" \
-  -d '{"query": "What are the key findings?", "top_k": 3}'
+  -d '{"enabled": true, "storage": "persistent"}'
+```
+
+---
+
+### POST /api/rag/reset
+
+Clear all ingested documents from the RAG system.
+
+**Response:**
+```json
+{
+  "status": "cleared",
+  "enabled": true,
+  "ready": false,
+  "documentCount": 0
+}
+```
+
+**Example:**
+```bash
+curl -X POST http://YOUR_DEVICE_IP:8889/api/rag/reset
 ```
 
 ---
@@ -744,16 +985,24 @@ curl -X POST http://YOUR_DEVICE_IP:8889/api/rag \
 
 ### GET /api/status
 
-Get detailed server status including uptime, memory usage, and loaded models.
+Get server status, active model, and RAG state.
 
 **Response:**
 ```json
 {
-  "status": "running",
-  "version": "1.0.0",
-  "models_loaded": 1,
-  "uptime": 3600,
-  "memory_usage": "2.5 GB"
+  "server": {
+    "isRunning": true,
+    "url": "http://192.168.1.110:8889",
+    "port": 8889,
+    "clientCount": 1
+  },
+  "model": {
+    "loaded": true,
+    "path": "/path/to/model.gguf"
+  },
+  "rag": {
+    "ready": false
+  }
 }
 ```
 
@@ -766,57 +1015,56 @@ curl http://YOUR_DEVICE_IP:8889/api/status
 
 ### POST /api/settings/thinking
 
-Configure thinking mode settings for enhanced reasoning capabilities.
+Enable or disable thinking mode (extended reasoning) for the currently loaded model.
 
 **Request Body:**
 ```json
 {
-  "enabled": true,
-  "model": "llama-3.2-1b",
-  "max_thinking_tokens": 1000
+  "enabled": true
 }
 ```
 
 **Response:**
 ```json
 {
-  "success": true,
+  "status": "updated",
   "enabled": true
 }
 ```
 
 **Parameters:**
 - `enabled` (boolean, required): Enable or disable thinking mode
-- `model` (string, optional): Model to use for thinking
-- `max_thinking_tokens` (number, optional): Maximum tokens for thinking process
 
 **Example:**
 ```bash
 curl -X POST http://YOUR_DEVICE_IP:8889/api/settings/thinking \
   -H "Content-Type: application/json" \
-  -d '{"enabled": true, "max_thinking_tokens": 500}'
+  -d '{"enabled": true}'
 ```
 
 ---
 
 ## Error Handling
 
-All endpoints return appropriate HTTP status codes and error messages:
+All endpoints return standard HTTP status codes with a JSON error body.
 
-**Success Codes:**
-- `200 OK`: Request succeeded
-- `201 Created`: Resource created successfully
+**Success codes:**
+- `200 OK`
+- `201 Created`
 
-**Error Codes:**
-- `400 Bad Request`: Invalid request parameters
-- `404 Not Found`: Resource not found
-- `500 Internal Server Error`: Server error occurred
+**Error codes:**
+- `400 Bad Request` — missing or invalid parameters
+- `404 Not Found` — resource does not exist
+- `405 Method Not Allowed`
+- `409 Conflict` — precondition not met (e.g. remote models disabled)
+- `422 Unprocessable Entity` — valid request but action cannot be performed (e.g. API key missing)
+- `500 Internal Server Error`
+- `503 Service Unavailable` — model not loaded
 
-**Error Response Format:**
+**Error response format:**
 ```json
 {
-  "error": "Error message describing what went wrong",
-  "code": "ERROR_CODE"
+  "error": "error_code"
 }
 ```
 
@@ -825,65 +1073,58 @@ All endpoints return appropriate HTTP status codes and error messages:
 ## Security Considerations
 
 - The server is designed for local network use only
-- No authentication is required by default (secured by network isolation)
-- CORS is enabled to allow browser-based access
-- API keys for remote models are stored securely on the device
-- Consider using a VPN or firewall if exposing to broader networks
+- No authentication is required (secured by network isolation)
+- CORS is enabled for all origins
+- API keys for remote providers are stored securely on the device and are never returned by any endpoint
+- Consider a VPN or firewall before exposing the server beyond your local network
 
 ---
 
 ## Rate Limiting
 
-Currently, there are no rate limits enforced. However, performance depends on:
-- Device capabilities (CPU, RAM)
-- Model size and complexity
-- Number of concurrent connections
+No rate limits are enforced. Performance depends on device CPU/RAM, model size, and number of concurrent connections.
 
 ---
 
 ## Common Use Cases
 
-### Chat Application Integration
+### Chat with a local model
 
 ```bash
 curl -X POST http://YOUR_DEVICE_IP:8889/api/chat \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "llama-3.2-1b",
+    "model": "llama-3.2-1b.gguf",
     "messages": [
       {"role": "system", "content": "You are a helpful coding assistant"},
       {"role": "user", "content": "Write a Python function to calculate fibonacci"}
     ],
-    "stream": true
+    "stream": false
   }'
 ```
 
-### Document Q&A with RAG
+### Ingest a document and check RAG status
 
 ```bash
-# First, ingest your documents
 curl -X POST http://YOUR_DEVICE_IP:8889/api/files/ingest \
   -H "Content-Type: application/json" \
-  -d '{"content": "Your document content here..."}'
+  -d '{"content": "Your document content here...", "fileName": "doc.txt"}'
 
-# Then query them
-curl -X POST http://YOUR_DEVICE_IP:8889/api/rag \
-  -H "Content-Type: application/json" \
-  -d '{"query": "What are the main points?", "top_k": 5}'
+curl http://YOUR_DEVICE_IP:8889/api/rag
 ```
 
-### Model Management
+### Model management
 
 ```bash
 # List available models
 curl http://YOUR_DEVICE_IP:8889/api/tags
 
-# Load a specific model
+# Load a model
 curl -X POST http://YOUR_DEVICE_IP:8889/api/models \
   -H "Content-Type: application/json" \
-  -d '{"action": "load", "model": "llama-3.2-1b"}'
+  -d '{"action": "load", "model": "llama-3.2-1b.gguf"}'
 
-# Check loaded models
+# Check what is loaded
 curl http://YOUR_DEVICE_IP:8889/api/ps
 ```
 
@@ -893,13 +1134,9 @@ curl http://YOUR_DEVICE_IP:8889/api/ps
 
 ### InferrLM CLI
 
-The InferrLM CLI is a command-line interface tool that demonstrates how to build applications using these REST APIs. It provides a fully functional terminal-based chat interface with streaming support, conversation history, and an interactive setup flow.
+The InferrLM CLI is a command-line interface tool built with React, Ink, and TypeScript. It connects to your InferrLM server and provides a fully functional terminal-based chat interface with streaming support and conversation history.
 
-The CLI is built using React and Ink for the terminal UI, with TypeScript for type safety. It connects to your InferrLM server and allows you to chat with your local models directly from the command line. This serves as a practical reference implementation for developers who want to integrate InferrLM into their own applications.
-
-You can find the complete source code at [github.com/sbhjt-gr/inferra-cli](https://github.com/sbhjt-gr/inferra-cli). The implementation shows how to handle streaming responses, manage conversation state, and provide a smooth user experience when working with the InferrLM APIs.
-
-To use the CLI, start your InferrLM server on your mobile device, then run the CLI tool on any computer connected to the same WiFi network. The tool will guide you through connecting to your server and selecting a model to chat with.
+Source code: [github.com/sbhjt-gr/inferra-cli](https://github.com/sbhjt-gr/inferra-cli)
 
 ---
 
@@ -912,5 +1149,5 @@ To use the CLI, start your InferrLM server on your mobile device, then run the C
 
 ---
 
-**Last Updated**: October 23, 2025  
-**API Version**: 1.0.0
+**Last Updated**: March 20, 2026  
+**API Version**: 0.8.3
