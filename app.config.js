@@ -3,7 +3,7 @@ export default {
     name: "InferrLM",
     slug: "inferrlm",
     owner: "subhajitgorai",
-    version: "0.8.3",
+    version: "0.8.4",
     orientation: "default",
     icon: "./assets/icon.png",
     userInterfaceStyle: "automatic",
@@ -23,8 +23,8 @@ export default {
       supportsTablet: true,
       requireFullScreen: false,
       bundleIdentifier: "com.gorai.inferra",
-      buildNumber: "285",
-      runtimeVersion: "0.8.3",
+      buildNumber: "288",
+      runtimeVersion: "0.8.4",
       infoPlist: {
         UIBackgroundModes: [
           "fetch",
@@ -53,14 +53,14 @@ export default {
       scheme: "com.gorai.inferra"
     },
     android: {
-      versionCode: 285,
+      versionCode: 288,
       predictiveBackGestureEnabled: false,
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#660880"
       },
       package: "com.gorai.ragionare",
-      runtimeVersion: "0.8.3",
+      runtimeVersion: "0.8.4",
       googleServicesFile: "./google-services.json",
       edgeToEdgeEnabled: true,
       resizeableActivity: true,
@@ -97,7 +97,7 @@ export default {
       ]
     },
     extra: {
-      autoUpdate: true,
+      autoUpdate: false,
       changelog: [
         "OpenAI-compatible API endpoints (/v1/chat/completions, /v1/models)",
         "Fixed connection issues with PC clients",
@@ -107,15 +107,6 @@ export default {
       OPENAI_API_KEY: process.env.OPENAI_API_KEY,
       ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
       HUGGINGFACE_TOKEN: process.env.HUGGINGFACE_TOKEN,
-      GOOGLE_SIGN_IN_WEB_CLIENT_ID: process.env.GOOGLE_SIGN_IN_WEB_CLIENT_ID,
-      GOOGLE_SIGN_IN_IOS_CLIENT_ID: process.env.GOOGLE_SIGN_IN_IOS_CLIENT_ID,
-      FIREBASE_API_KEY: process.env.FIREBASE_API_KEY,
-      FIREBASE_AUTH_DOMAIN: process.env.FIREBASE_AUTH_DOMAIN,
-      FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
-      FIREBASE_STORAGE_BUCKET: process.env.FIREBASE_STORAGE_BUCKET,
-      FIREBASE_MESSAGING_SENDER_ID: process.env.FIREBASE_MESSAGING_SENDER_ID,
-      FIREBASE_APP_ID: process.env.FIREBASE_APP_ID,
-      FIREBASE_MEASUREMENT_ID: process.env.FIREBASE_MEASUREMENT_ID,
       eas: {
         projectId: "a539a082-58a3-4f29-9bb7-107913124e7d"
       },

@@ -179,7 +179,7 @@ export function getHomepageHTML(): string {
         <p class="endpoint-desc">Chat completions with streaming (SSE) support. Compatible with OpenAI client libraries and plugins.</p>
         <div class="code-label">Request:</div>
         <pre class="code-block">{
-  "model": "llama-3.2-1b",
+  "model": "llama-3.2-1b.gguf",
   "messages": [
     {"role": "system", "content": "You are a helpful assistant"},
     {"role": "user", "content": "Hello!"}
@@ -200,7 +200,7 @@ data: [DONE]</pre>
         <pre class="code-block">{
   "id": "chatcmpl-...",
   "object": "chat.completion",
-  "model": "llama-3.2-1b",
+  "model": "llama-3.2-1b.gguf",
   "choices": [{
     "index": 0,
     "message": {"role": "assistant", "content": "Hi there!"},
@@ -215,14 +215,13 @@ data: [DONE]</pre>
           <span class="method get">GET</span>
           <span class="endpoint-path">/v1/models</span>
         </div>
-        <p class="endpoint-desc">List available models in OpenAI format. Includes local GGUF models, Apple Foundation, and configured remote providers.</p>
+        <p class="endpoint-desc">List available models in OpenAI format. Includes local GGUF models and Apple Foundation.</p>
         <div class="code-label">Response:</div>
         <pre class="code-block">{
   "object": "list",
   "data": [
-    {"id": "llama-3.2-1b", "object": "model", "owned_by": "local"},
-    {"id": "apple-foundation", "object": "model", "owned_by": "apple"},
-    {"id": "gemini", "object": "model", "owned_by": "remote"}
+    {"id": "llama-3.2-1b.gguf", "object": "model", "owned_by": "local"},
+    {"id": "apple-foundation", "object": "model", "owned_by": "apple"}
   ]
 }</pre>
       </div>
@@ -236,10 +235,10 @@ data: [DONE]</pre>
           <span class="method post">POST</span>
           <span class="endpoint-path">/api/chat</span>
         </div>
-        <p class="endpoint-desc">Stream chat completions with conversation history. Use local GGUF names, <code>apple-foundation</code>, or remote provider identifiers in the <code>model</code> field.</p>
+        <p class="endpoint-desc">Stream chat completions with conversation history. Use local GGUF names or <code>apple-foundation</code> in the <code>model</code> field.</p>
         <div class="code-label">Request:</div>
         <pre class="code-block">{
-  "model": "gemini",
+  "model": "llama-3.2-1b.gguf",
   "messages": [
     {"role": "system", "content": "You are a helpful assistant"},
     {"role": "user", "content": "Hello!"}
@@ -258,7 +257,7 @@ data: [DONE]</pre>
           <span class="method post">POST</span>
           <span class="endpoint-path">/api/generate</span>
         </div>
-        <p class="endpoint-desc">Generate completion from a prompt without conversation context using local, Apple Foundation, or remote providers.</p>
+        <p class="endpoint-desc">Generate completion from a prompt without conversation context using local or Apple Foundation models.</p>
         <div class="code-label">Request:</div>
         <pre class="code-block">{
   "model": "apple-foundation",
@@ -283,8 +282,8 @@ data: [DONE]</pre>
         <div class="code-label">Response:</div>
         <pre class="code-block">{
   "chats": [
-    {"id": "chat-1", "title": "Quantum Physics", "updated": "2025-10-23T10:30:00Z"},
-    {"id": "chat-2", "title": "Cooking Tips", "updated": "2025-10-22T15:20:00Z"}
+    {"id": "chat-abc123", "title": "Quantum Physics", "timestamp": 1700000000000, "modelPath": "/path/to/model.gguf", "messageCount": 12},
+    {"id": "chat-def456", "title": "Cooking Tips", "timestamp": 1699900000000, "modelPath": null, "messageCount": 4}
   ]
 }</pre>
       </div>
@@ -297,7 +296,6 @@ data: [DONE]</pre>
         <p class="endpoint-desc">Create or update a chat conversation</p>
         <div class="code-label">Request:</div>
         <pre class="code-block">{
-  "id": "chat-1",
   "title": "My Conversation",
   "messages": [...]
 }</pre>
@@ -317,9 +315,10 @@ data: [DONE]</pre>
         <pre class="code-block">{
   "models": [
     {
-      "name": "llama-3.2-1b",
-      "modified_at": "2025-10-20T10:00:00Z",
+      "name": "llama-3.2-1b.gguf",
+      "modified_at": "2026-03-20T10:00:00.000Z",
       "size": 1234567890,
+      "digest": null,
       "model_type": "llama",
       "is_external": false
     }
@@ -337,11 +336,12 @@ data: [DONE]</pre>
         <pre class="code-block">{
   "models": [
     {
-      "name": "llama-3.2-1b",
-      "model": "/path/to/model.gguf",
+      "name": "llama-3.2-1b.gguf",
+      "model": "/path/to/llama-3.2-1b.gguf",
       "size": 1234567890,
-      "loaded_at": "2025-10-23T10:00:00Z",
-      "is_external": false
+      "loaded_at": "2026-03-20T10:00:00.000Z",
+      "is_external": false,
+      "model_type": "llama"
     }
   ]
 }</pre>
@@ -352,20 +352,21 @@ data: [DONE]</pre>
           <span class="method post">POST</span>
           <span class="endpoint-path">/api/show</span>
         </div>
-        <p class="endpoint-desc">Get detailed information about a model</p>
+        <p class="endpoint-desc">Get detailed information about a model including GGUF metadata and current settings. Use <code>name</code>, <code>model</code>, or <code>path</code> in the request.</p>
         <div class="code-label">Request:</div>
         <pre class="code-block">{
-  "model": "llama-3.2-1b"
+  "model": "llama-3.2-1b.gguf"
 }</pre>
         <div class="code-label">Response:</div>
         <pre class="code-block">{
-  "modelinfo": {
-    "general.architecture": "llama",
-    "general.file_type": "GGUF",
-    "general.parameter_count": 1000000000
-  },
-  "parameters": "temperature=0.7\\ntop_p=0.9",
-  "template": "{{.System}}\\n{{.Prompt}}"
+  "name": "llama-3.2-1b.gguf",
+  "path": "/path/to/llama-3.2-1b.gguf",
+  "size": 1234567890,
+  "model_type": "llama",
+  "capabilities": ["completion"],
+  "multimodal": false,
+  "settings": {"temperature": 0.7, "topP": 0.9, "maxTokens": 2048},
+  "info": {"general.architecture": "llama", "general.parameter_count": 1000000000}
 }</pre>
       </div>
 
@@ -374,17 +375,17 @@ data: [DONE]</pre>
           <span class="method post">POST</span>
           <span class="endpoint-path">/api/pull</span>
         </div>
-        <p class="endpoint-desc">Download a model from URL</p>
+        <p class="endpoint-desc">Download a model from a URL directly to the device. Download runs in the background — check <code>GET /api/tags</code> for completion.</p>
         <div class="code-label">Request:</div>
         <pre class="code-block">{
-  "url": "https://example.com/model.gguf",
-  "model": "my-custom-model"
+  "url": "https://huggingface.co/model.gguf",
+  "model": "my-custom-model.gguf"
 }</pre>
         <div class="code-label">Response:</div>
         <pre class="code-block">{
   "status": "downloading",
-  "model": "my-custom-model",
-  "downloadId": "download-123"
+  "model": "my-custom-model.gguf",
+  "downloadId": "download-abc123"
 }</pre>
       </div>
 
@@ -393,15 +394,17 @@ data: [DONE]</pre>
           <span class="method post">POST</span>
           <span class="endpoint-path">/api/copy</span>
         </div>
-        <p class="endpoint-desc">Create a copy of an existing model</p>
+        <p class="endpoint-desc">Copy an existing model file under a new name. Returns 409 if the destination already exists. External models cannot be copied.</p>
         <div class="code-label">Request:</div>
         <pre class="code-block">{
-  "source": "llama-3.2-1b",
-  "destination": "llama-3.2-1b-backup"
+  "source": "llama-3.2-1b.gguf",
+  "destination": "llama-backup.gguf"
 }</pre>
         <div class="code-label">Response:</div>
         <pre class="code-block">{
-  "success": true
+  "status": "copied",
+  "source": "llama-3.2-1b.gguf",
+  "destination": "llama-backup.gguf"
 }</pre>
       </div>
 
@@ -410,10 +413,10 @@ data: [DONE]</pre>
           <span class="method delete">DELETE</span>
           <span class="endpoint-path">/api/delete</span>
         </div>
-        <p class="endpoint-desc">Delete a model</p>
+        <p class="endpoint-desc">Delete a model from local storage</p>
         <div class="code-label">Request:</div>
         <pre class="code-block">{
-  "name": "llama-3.2-1b"
+  "name": "llama-3.2-1b.gguf"
 }</pre>
         <div class="code-label">Response:</div>
         <pre class="code-block">{
@@ -434,7 +437,7 @@ data: [DONE]</pre>
         <div class="code-label">Request (load/unload):</div>
         <pre class="code-block">{
   "action": "load",
-  "model": "llama-3.2-1b"
+  "model": "llama-3.2-1b.gguf"
 }</pre>
         <div class="code-label">Response:</div>
         <pre class="code-block">{
@@ -465,64 +468,15 @@ data: [DONE]</pre>
           <span class="method post">POST</span>
           <span class="endpoint-path">/api/models/apple-foundation</span>
         </div>
-        <p class="endpoint-desc">Configure Apple Foundation model settings</p>
-        <div class="code-label">Request:</div>
+        <p class="endpoint-desc">Check whether Apple Foundation is ready to accept requests. No request body needed. Enable Apple Foundation in app settings first.</p>
+        <div class="code-label">Response (ready):</div>
         <pre class="code-block">{
-  "enabled": true,
-  "model": "gpt-4o"
+  "status": "ready"
 }</pre>
-        <div class="code-label">Response:</div>
-        <pre class="code-block">{
-  "success": true,
-  "enabled": true,
-  "model": "gpt-4o"
-}</pre>
-      </div>
-
-      <div class="endpoint-card">
-        <div class="endpoint-header">
-          <span class="method get">GET</span>
-          <span class="endpoint-path">/api/models/remote/status</span>
-        </div>
-        <p class="endpoint-desc">Get status of all remote model providers (Gemini, ChatGPT, Claude)</p>
-        <div class="code-label">Response:</div>
-        <pre class="code-block">{
-  "providers": [
-    {
-      "provider": "gemini",
-      "configured": true,
-      "model": "gemini-1.5-pro",
-      "usingDefault": false
-    },
-    {
-      "provider": "chatgpt",
-      "configured": false,
-      "model": null,
-      "usingDefault": false
-    }
-  ]
-}</pre>
-      </div>
-
-      <div class="endpoint-card">
-        <div class="endpoint-header">
-          <span class="method post">POST</span>
-          <span class="endpoint-path">/api/models/remote</span>
-        </div>
-  <p class="endpoint-desc">Configure remote model provider settings; use the same provider name in the <code>model</code> field of /api/chat or /api/generate.</p>
-        <div class="code-label">Request:</div>
-        <pre class="code-block">{
-  "provider": "gemini",
-  "model": "gemini-1.5-pro",
-  "apiKey": "your-api-key-here"
-}</pre>
-        <div class="code-label">Response:</div>
-        <pre class="code-block">{
-  "success": true,
-  "provider": "gemini",
-  "model": "gemini-1.5-pro",
-  "configured": true
-}</pre>
+        <div class="code-label">Error responses:</div>
+        <pre class="code-block">501 apple_foundation_unavailable — device does not support Apple Intelligence
+428 requirements_not_met — device needs to be updated
+409 apple_foundation_disabled — enable in app settings first</pre>
       </div>
 
       <div class="endpoint-card">
@@ -533,7 +487,7 @@ data: [DONE]</pre>
         <p class="endpoint-desc">Get API version</p>
         <div class="code-label">Response:</div>
         <pre class="code-block">{
-  "version": "1.0.0"
+  "version": "0.8.3"
 }</pre>
       </div>
     </div>
@@ -549,7 +503,7 @@ data: [DONE]</pre>
         <p class="endpoint-desc">Generate embeddings for text</p>
         <div class="code-label">Request:</div>
         <pre class="code-block">{
-  "model": "llama-3.2-1b",
+  "model": "llama-3.2-1b.gguf",
   "input": "The quick brown fox"
 }</pre>
         <div class="code-label">Response:</div>
@@ -557,7 +511,7 @@ data: [DONE]</pre>
   "embeddings": [
     [0.123, -0.456, 0.789, ...]
   ],
-  "model": "llama-3.2-1b"
+  "model": "llama-3.2-1b.gguf"
 }</pre>
       </div>
 
@@ -594,12 +548,13 @@ data: [DONE]</pre>
           <span class="method get">GET</span>
           <span class="endpoint-path">/api/rag</span>
         </div>
-        <p class="endpoint-desc">List ingested documents</p>
+        <p class="endpoint-desc">Get RAG system status</p>
         <div class="code-label">Response:</div>
         <pre class="code-block">{
-  "documents": [
-    {"id": "doc1", "name": "doc1.pdf", "chunks": 45, "indexed": "2025-10-23T10:00:00Z"}
-  ]
+  "enabled": true,
+  "ready": true,
+  "storage": "persistent",
+  "documentCount": 3
 }</pre>
       </div>
 
@@ -608,18 +563,34 @@ data: [DONE]</pre>
           <span class="method post">POST</span>
           <span class="endpoint-path">/api/rag</span>
         </div>
-        <p class="endpoint-desc">Query documents with RAG</p>
+        <p class="endpoint-desc">Configure the RAG system — enable/disable, set storage type, or trigger initialisation</p>
         <div class="code-label">Request:</div>
         <pre class="code-block">{
-  "query": "What is the main topic?",
-  "top_k": 5
+  "enabled": true,
+  "storage": "persistent",
+  "initialize": true
 }</pre>
         <div class="code-label">Response:</div>
         <pre class="code-block">{
-  "results": [
-    {"text": "Relevant chunk 1", "score": 0.92, "source": "doc1.pdf"},
-    {"text": "Relevant chunk 2", "score": 0.85, "source": "doc2.pdf"}
-  ]
+  "enabled": true,
+  "ready": true,
+  "storage": "persistent",
+  "documentCount": 0
+}</pre>
+      </div>
+
+      <div class="endpoint-card">
+        <div class="endpoint-header">
+          <span class="method post">POST</span>
+          <span class="endpoint-path">/api/rag/reset</span>
+        </div>
+        <p class="endpoint-desc">Clear all ingested documents from the RAG system</p>
+        <div class="code-label">Response:</div>
+        <pre class="code-block">{
+  "status": "cleared",
+  "enabled": true,
+  "ready": false,
+  "documentCount": 0
 }</pre>
       </div>
     </div>
@@ -635,11 +606,19 @@ data: [DONE]</pre>
         <p class="endpoint-desc">Get detailed server status</p>
         <div class="code-label">Response:</div>
         <pre class="code-block">{
-  "status": "running",
-  "version": "1.0.0",
-  "models_loaded": 1,
-  "uptime": 3600,
-  "memory_usage": "2.5 GB"
+  "server": {
+    "isRunning": true,
+    "url": "http://192.168.1.110:8889",
+    "port": 8889,
+    "clientCount": 1
+  },
+  "model": {
+    "loaded": true,
+    "path": "/path/to/llama-3.2-1b.gguf"
+  },
+  "rag": {
+    "ready": false
+  }
 }</pre>
       </div>
 
@@ -651,9 +630,12 @@ data: [DONE]</pre>
         <p class="endpoint-desc">Configure thinking mode settings</p>
         <div class="code-label">Request:</div>
         <pre class="code-block">{
-  "enabled": true,
-  "model": "llama-3.2-1b",
-  "max_thinking_tokens": 1000
+  "enabled": true
+}</pre>
+        <div class="code-label">Response:</div>
+        <pre class="code-block">{
+  "status": "updated",
+  "enabled": true
 }</pre>
       </div>
     </div>

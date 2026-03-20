@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Updates from 'expo-updates';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
 import SettingsSection from './SettingsSection';
@@ -129,11 +130,26 @@ const SystemInfoSection = ({ systemInfo }: SystemInfoSectionProps) => {
                   App Version
                 </Text>
                 <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
-                  {systemInfo.appVersion} (5)
+                  {systemInfo.appVersion}
                 </Text>
               </View>
             </View>
           </View>
+          <View style={[styles.settingItem, styles.settingItemBorder]}>
+            <View style={styles.settingLeft}>
+              <View style={[styles.iconContainer, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}>
+                <MaterialCommunityIcons name="cloud-download-outline" size={22} color={iconColor} />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={[styles.settingText, { color: themeColors.text }]}>
+                  OTA Version
+                </Text>
+                <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
+                  {Updates.channel ?? 'embedded'}{Updates.updateId ? ` · ${Updates.updateId.slice(0, 8)}` : ''}
+                </Text>
+              </View>
+            </View>
+          </View>        
         </>
       )}
     </SettingsSection>
