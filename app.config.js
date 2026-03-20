@@ -1,4 +1,4 @@
-const isDev = process.env.APP_ENV === 'development';
+const APP_ENV = process.env.APP_ENV;
 
 export default {
   expo: {
@@ -17,13 +17,13 @@ export default {
       enabled: true,
       checkAutomatically: 'NEVER',
       url: "https://u.expo.dev/a539a082-58a3-4f29-9bb7-107913124e7d",
-      ...(isDev ? {} : {
+      ...(APP_ENV === 'production' || APP_ENV === 'preview' ? {
         codeSigningCertificate: "./keys/certificate.pem",
         codeSigningMetadata: {
           keyid: "main",
           alg: "rsa-v1_5-sha256",
         },
-      }),
+      } : {}),
     },
     assetBundlePatterns: [
       "**/*"
@@ -31,7 +31,7 @@ export default {
     ios: {
       supportsTablet: true,
       requireFullScreen: false,
-      bundleIdentifier: isDev ? "com.gorai.inferra.dev" : "com.gorai.inferra",
+      bundleIdentifier: APP_ENV === 'development' ? "com.gorai.inferra.dev" : "com.gorai.inferra",
       buildNumber: "288",
       runtimeVersion: "0.8.4",
       infoPlist: {
@@ -59,7 +59,7 @@ export default {
       entitlements: {
         "com.apple.developer.applesignin": ["Default"]
       },
-      scheme: isDev ? "com.gorai.inferra.dev" : "com.gorai.inferra"
+      scheme: APP_ENV === 'development' ? "com.gorai.inferra.dev" : "com.gorai.inferra"
     },
     android: {
       versionCode: 288,

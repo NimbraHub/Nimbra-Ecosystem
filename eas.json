@@ -21,6 +21,9 @@
     "preview": {
       "distribution": "internal",
       "channel": "preview",
+      "env": {
+        "APP_ENV": "preview"
+      },
       "android": {
         "buildType": "apk"
       },
@@ -32,6 +35,9 @@
     "production": {
       "distribution": "store",
       "channel": "production",
+      "env": {
+        "APP_ENV": "production"
+      },
       "android": {
         "buildType": "apk"
       },
