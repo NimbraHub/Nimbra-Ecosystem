@@ -707,7 +707,15 @@ class LlamaManager {
             compactCount: compactMessages.length,
             minimalCount: minimalMessages.length,
           });
-          await runCompletion(minimalMessages, 'minimal-retry');
+
+          try {
+            await runCompletion(minimalMessages, 'minimal-retry');
+          } catch (minimalError) {
+            if (this.isContextSpaceError(minimalError)) {
+              throw new Error('CONTEXT_LENGTH_EXCEEDED');
+            }
+            throw minimalError;
+          }
         }
       }
 
