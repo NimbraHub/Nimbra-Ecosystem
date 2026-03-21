@@ -650,6 +650,7 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
 
   const startNewChat = async () => {
     try {
+      resetStreamingState();
       await ChatLifecycleService.startNewChat({ setChat, setMessages });
     } catch (error) {
       showDialog(
