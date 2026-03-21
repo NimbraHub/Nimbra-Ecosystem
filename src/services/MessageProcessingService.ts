@@ -657,11 +657,11 @@ export class MessageProcessingService {
         return true;
       }
 
-      tokenCount++;
       if (isThinking) {
         thinking += token;
         this.callbacks.setStreamingThinking(thinking.trim());
       } else {
+        tokenCount++;
         fullResponse += token;
         this.callbacks.setStreamingMessage(fullResponse);
       }
