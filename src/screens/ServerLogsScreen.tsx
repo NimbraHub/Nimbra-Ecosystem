@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, Text, TouchableOpacity, RefreshControl, Switch } from 'react-native';
+import { View, StyleSheet, ScrollView, Text, TouchableOpacity, RefreshControl, Switch, Clipboard } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -283,13 +283,41 @@ export default function ServerLogsScreen() {
         showBackButton
         onBackPress={() => navigation.goBack()}
         rightButtons={
-          <TouchableOpacity
-            style={s.headerBtn}
-            onPress={() => setClearDialogVisible(true)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <MaterialCommunityIcons name="delete-outline" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={s.headerBtns}>
+            <TouchableOpacity
+              style={s.headerBtn}
+              onPress={() => {
+                const text = filteredLogs.map(log => {
+                  if (log.metadata) {
+                    const m = log.metadata;
+                    const lines = [`[${log.timestamp}] [${m.streaming ? 'STREAM' : m.response ? 'DONE' : 'REQ'}] ${m.model || ''} ${m.endpoint || ''}${m.duration != null ? ` ${m.duration}ms` : ''}`];
+                    if (m.params && Object.keys(m.params).length > 0) {
+                      lines.push('  params: ' + JSON.stringify(m.params));
+                    }
+                    if (m.messages) {
+                      m.messages.forEach(msg => lines.push(`  ${msg.role}: ${msg.content}`));
+                    }
+                    if (m.response) {
+                      lines.push('  response: ' + m.response);
+                    }
+                    return lines.join('\n');
+                  }
+                  return `[${log.timestamp}] [${log.level}] [${log.category}] ${log.message}`;
+                }).join('\n');
+                Clipboard.setString(text);
+              }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <MaterialCommunityIcons name="content-copy" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={s.headerBtn}
+              onPress={() => setClearDialogVisible(true)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <MaterialCommunityIcons name="delete-outline" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -373,6 +401,11 @@ const s = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  headerBtns: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerBtn: {
     width: 36,
