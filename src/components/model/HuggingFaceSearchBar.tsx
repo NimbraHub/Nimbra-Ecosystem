@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Searchbar, Button, ActivityIndicator } from 'react-native-paper';
+import { Searchbar, Button, ActivityIndicator, IconButton } from 'react-native-paper';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
 
@@ -28,11 +28,18 @@ export const HuggingFaceSearchBar: React.FC<HuggingFaceSearchBarProps> = ({
         placeholder="Search on HuggingFace..."
         onChangeText={onSearchChange}
         onSubmitEditing={onSearchSubmit}
-        onClearIconPress={onClearSearch}
         value={searchQuery}
         style={[styles.searchBar, { backgroundColor: themeColors.cardBackground }]}
         inputStyle={{ color: themeColors.text }}
         iconColor={themeColors.text}
+        right={searchQuery.length > 0 ? () => (
+          <IconButton
+            icon="close"
+            onPress={onClearSearch}
+            iconColor={themeColors.text}
+            size={20}
+          />
+        ) : undefined}
       />
 
       {(searchQuery.length > 0 || isLoading) && (
