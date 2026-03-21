@@ -189,6 +189,7 @@ class MlxManager implements InferenceManager {
       }
 
       this.state = { loaded: true, modelId: loadedId };
+      LLM.debug = true;
       console.log('mlx_init_complete', loadedId);
     } catch (error) {
       console.log('mlx_init_error', error);
@@ -196,38 +197,105 @@ class MlxManager implements InferenceManager {
     }
   }
 
+  stop() {
+    try {
+      LLM.stop();
+      console.log('mlx_stop');
+    } catch {}
+  }
+
   async gen(messages: Msg[], opts?: GenOpts) {
     console.log('mlx_gen_start', { loaded: this.state.loaded, modelId: this.state.modelId, messageCount: messages.length });
-    
+
     if (!this.state.loaded) {
       console.log('mlx_gen_error_not_ready');
       throw new Error('engine_not_ready');
     }
-    
+
+    /*
+     Cancel any previous generation before starting a new one.
+     Without this, concurrent Swift tasks corrupt the model's
+     shared KV-cache context, producing empty or garbage output.
+    */
+    this.stop();
+
+    console.log('mlx_gen_messages_dump:');
+    messages.forEach((msg, i) => {
+      const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+      console.log(`  [${i}:${msg.role}] ${content}`);
+    });
+
+    /*
+     Set system prompt from the actual first message (which
+     MessageProcessingService builds), not from the settings
+     field which can be empty.
+    */
+    const firstMsg = messages[0];
+    if (firstMsg?.role === 'system') {
+      const sysContent = typeof firstMsg.content === 'string' ? firstMsg.content : '';
+      LLM.systemPrompt = sysContent;
+    } else if (opts?.settings?.systemPrompt !== undefined) {
+      LLM.systemPrompt = opts.settings.systemPrompt;
+    }
+    if (opts?.settings?.maxTokens !== undefined) {
+      LLM.maxTokens = opts.settings.maxTokens;
+    }
+    if (opts?.settings?.temperature !== undefined) {
+      LLM.temperature = opts.settings.temperature;
+    }
+    if (opts?.settings?.enableThinking !== undefined) {
+      LLM.enableThinking = opts.settings.enableThinking;
+    }
+
+    console.log('mlx_gen_params', { systemPrompt: LLM.systemPrompt, maxTokens: LLM.maxTokens, temperature: LLM.temperature, enableThinking: LLM.enableThinking });
+
+    /*
+     The native side accumulates history via manageHistory:true.
+     Only clear when starting a fresh conversation (TS sends just
+     system + first user). For follow-up turns the native history
+     already contains previous exchanges.
+    */
+    const nonSystemMsgs = firstMsg?.role === 'system' ? messages.slice(1) : messages;
+    const expectedHistoryCount = nonSystemMsgs.length - 1;
+    const historyBefore = LLM.getHistory();
+    console.log('mlx_history_check', { nativeCount: historyBefore.length, expectedCount: expectedHistoryCount });
+
+    if (historyBefore.length !== expectedHistoryCount) {
+      LLM.clearHistory();
+      console.log('mlx_history_cleared_mismatch');
+    }
+
     const lastMessage = messages[messages.length - 1];
     const prompt = typeof lastMessage.content === 'string' ? lastMessage.content : '';
     console.log('mlx_gen_prompt', { promptLength: prompt.length, role: lastMessage.role });
-
-    if (opts?.settings?.systemPrompt !== undefined) {
-      LLM.systemPrompt = opts.settings.systemPrompt;
-    }
+    console.log('mlx_gen_prompt_full:', prompt);
 
     let full = '';
     let tokenCount = 0;
+    let cancelled = false;
     await LLM.stream(prompt, token => {
+      if (cancelled) return;
       full += token;
       tokenCount++;
-      console.log('mlx_token_received', { tokenCount, tokenLength: token.length });
+      if (tokenCount <= 10 || tokenCount % 50 === 0) {
+        console.log(`mlx_token[${tokenCount}]`, JSON.stringify(token));
+      }
       if (opts?.onToken) {
-        const continueStreaming = opts.onToken(token);
-        console.log('mlx_token_callback_result', { continueStreaming });
-        if (continueStreaming === false) {
-          console.log('mlx_stream_cancelled_by_callback');
+        const cont = opts.onToken(token);
+        if (cont === false) {
+          console.log('mlx_stream_cancelled');
+          cancelled = true;
+          this.stop();
         }
       }
     });
-    
-    console.log('mlx_gen_complete', { responseLength: full.length, tokenCount });
+
+    const historyAfter = LLM.getHistory();
+    console.log('mlx_gen_complete', { responseLength: full.length, tokenCount, historyAfter: historyAfter.length });
+    console.log('mlx_gen_result:', full);
+    historyAfter.forEach((msg, i) => {
+      console.log(`  hist_after[${i}:${msg.role}] ${msg.content}`);
+    });
     return full.trim();
   }
 

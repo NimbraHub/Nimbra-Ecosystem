@@ -136,7 +136,7 @@ export default function ModelParametersScreen({ navigation }: Props) {
       maximumValue: 4096,
       step: 1,
       description:
-        'Maximum number of tokens in model responses. More tokens = longer responses but slower generation.',
+        'Maximum number of tokens in model responses.',
     });
   };
 

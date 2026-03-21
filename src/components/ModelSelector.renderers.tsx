@@ -41,13 +41,15 @@ export const renderAppleFoundationItem = (
 ) => {
   const { currentTheme, themeColors, selectedModelPath, isGenerating, handleModelSelect } = context;
   const isSelected = selectedModelPath === item.id;
+  const darkPurple = '#C060E0';
+  const selectedColor = isSelected ? (currentTheme === 'dark' ? darkPurple : getThemeAwareColor('#4a0660', currentTheme)) : currentTheme === 'dark' ? '#fff' : themeColors.text;
 
   return (
     <TouchableOpacity
       style={[
         styles.modelItem,
         { backgroundColor: themeColors.borderColor },
-        isSelected && styles.selectedModelItem,
+        isSelected && (currentTheme === 'dark' ? { backgroundColor: 'rgba(192, 96, 224, 0.22)' } : styles.selectedModelItem),
         isGenerating && styles.modelItemDisabled,
       ]}
       onPress={() => handleModelSelect(item)}
@@ -57,7 +59,7 @@ export const renderAppleFoundationItem = (
         <MaterialCommunityIcons
           name={isSelected ? 'apple' : 'apple'}
           size={28}
-          color={isSelected ? (currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme)) : currentTheme === 'dark' ? '#fff' : themeColors.text}
+          color={selectedColor}
         />
       </View>
       <View style={styles.modelInfo}>
@@ -66,7 +68,7 @@ export const renderAppleFoundationItem = (
             style={[
               styles.modelName,
               { color: currentTheme === 'dark' ? '#fff' : themeColors.text },
-              isSelected && { color: currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme) },
+              isSelected && { color: currentTheme === 'dark' ? darkPurple : getThemeAwareColor('#4a0660', currentTheme) },
             ]}
           >
             {item.name}
@@ -124,7 +126,7 @@ export const renderAppleFoundationItem = (
           <MaterialCommunityIcons
             name="check-circle"
             size={24}
-            color={currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme)}
+            color={currentTheme === 'dark' ? darkPurple : getThemeAwareColor('#4a0660', currentTheme)}
           />
         </View>
       )}
@@ -147,6 +149,7 @@ export const renderLocalModelItem = (
   } = context;
 
   const isGroup = 'isMLXGroup' in item && item.isMLXGroup;
+  const darkPurple = '#C060E0';
 
   if (isGroup) {
     const group = item as MLXGroup;
@@ -158,7 +161,7 @@ export const renderLocalModelItem = (
         style={[
           styles.groupCard,
           { backgroundColor: themeColors.borderColor },
-          isSelected && styles.selectedModelItem,
+          isSelected && (currentTheme === 'dark' ? { backgroundColor: 'rgba(192, 96, 224, 0.22)' } : styles.selectedModelItem),
         ]}
       >
         <TouchableOpacity
@@ -176,7 +179,7 @@ export const renderLocalModelItem = (
               color={
                 isSelected
                   ? currentTheme === 'dark'
-                    ? '#fff'
+                    ? darkPurple
                     : getThemeAwareColor('#4a0660', currentTheme)
                   : currentTheme === 'dark'
                     ? '#fff'
@@ -190,7 +193,7 @@ export const renderLocalModelItem = (
                 style={[
                   styles.modelName,
                   { color: currentTheme === 'dark' ? '#fff' : themeColors.text },
-                  isSelected && { color: currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme) },
+                  isSelected && { color: currentTheme === 'dark' ? darkPurple : getThemeAwareColor('#4a0660', currentTheme) },
                 ]}
               >
                 {getDisplayName(group.name)}
@@ -243,7 +246,7 @@ export const renderLocalModelItem = (
               <MaterialCommunityIcons
                 name="check-circle"
                 size={20}
-                color={currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme)}
+                color={currentTheme === 'dark' ? darkPurple : getThemeAwareColor('#4a0660', currentTheme)}
               />
             )}
           </View>
@@ -301,7 +304,7 @@ export const renderLocalModelItem = (
       style={[
         styles.modelItem,
         { backgroundColor: themeColors.borderColor },
-        selectedModelPath === item.path && styles.selectedModelItem,
+        selectedModelPath === item.path && (currentTheme === 'dark' ? { backgroundColor: 'rgba(192, 96, 224, 0.22)' } : styles.selectedModelItem),
         isGenerating && styles.modelItemDisabled,
       ]}
       onPress={() => handleModelSelect(item)}
@@ -312,7 +315,7 @@ export const renderLocalModelItem = (
           name={selectedModelPath === item.path ? 'cube' : 'cube-outline'}
           size={28}
           color={selectedModelPath === item.path
-            ? currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme)
+            ? currentTheme === 'dark' ? darkPurple : getThemeAwareColor('#4a0660', currentTheme)
             : currentTheme === 'dark' ? '#fff' : themeColors.text}
         />
       </View>
@@ -322,7 +325,7 @@ export const renderLocalModelItem = (
             style={[
               styles.modelName,
               { color: currentTheme === 'dark' ? '#fff' : themeColors.text },
-              selectedModelPath === item.path && { color: currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme) },
+              selectedModelPath === item.path && { color: currentTheme === 'dark' ? darkPurple : getThemeAwareColor('#4a0660', currentTheme) },
             ]}
           >
             {getDisplayName(item.name)}
@@ -362,7 +365,7 @@ export const renderLocalModelItem = (
           <MaterialCommunityIcons
             name="check-circle"
             size={24}
-            color={currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme)}
+            color={currentTheme === 'dark' ? darkPurple : getThemeAwareColor('#4a0660', currentTheme)}
           />
         </View>
       )}
@@ -388,13 +391,14 @@ export const renderOnlineModelItem = (
   const isSelected = selectedModelPath === item.id;
   const hasApiKey = onlineModelStatuses[item.id];
   const isRemoteModelsDisabled = !enableRemoteModels || !isLoggedIn;
+  const darkPurple = '#C060E0';
 
   return (
     <TouchableOpacity
       style={[
         styles.modelItem,
         { backgroundColor: themeColors.borderColor },
-        isSelected && styles.selectedModelItem,
+        isSelected && (currentTheme === 'dark' ? { backgroundColor: 'rgba(192, 96, 224, 0.22)' } : styles.selectedModelItem),
         isGenerating && styles.modelItemDisabled
       ]}
       onPress={() => handleModelSelect(item)}
@@ -404,9 +408,11 @@ export const renderOnlineModelItem = (
         <MaterialCommunityIcons 
           name={isSelected ? "cloud" : "cloud-outline"} 
           size={28} 
-          color={isSelected || hasApiKey ? 
-            currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme) : 
-            currentTheme === 'dark' ? '#fff' : themeColors.secondaryText} 
+          color={isSelected
+            ? currentTheme === 'dark' ? darkPurple : getThemeAwareColor('#4a0660', currentTheme)
+            : hasApiKey
+              ? currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme)
+              : currentTheme === 'dark' ? '#fff' : themeColors.secondaryText} 
         />
       </View>
       <View style={styles.modelInfo}>
@@ -414,7 +420,7 @@ export const renderOnlineModelItem = (
           <Text style={[
             styles.modelName, 
             { color: currentTheme === 'dark' ? '#fff' : themeColors.text },
-            isSelected && { color: currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme) }
+            isSelected && { color: currentTheme === 'dark' ? darkPurple : getThemeAwareColor('#4a0660', currentTheme) }
           ]}>
             {item.name}
           </Text>
@@ -459,7 +465,7 @@ export const renderOnlineModelItem = (
           <MaterialCommunityIcons 
             name="check-circle" 
             size={24} 
-            color={currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme)} 
+            color={currentTheme === 'dark' ? darkPurple : getThemeAwareColor('#4a0660', currentTheme)} 
           />
         </View>
       )}

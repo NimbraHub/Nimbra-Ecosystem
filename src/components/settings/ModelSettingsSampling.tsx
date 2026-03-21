@@ -63,7 +63,7 @@ const ModelSettingsSampling = ({
               </Text>
             </View>
             <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
-              Maximum number of tokens in model responses. More tokens = longer responses but slower generation.
+              Maximum number of tokens in model responses.
             </Text>
             {modelSettings.maxTokens !== defaultSettings.maxTokens && (
               <TouchableOpacity

@@ -86,11 +86,7 @@ export default function TextFileViewerModal({
 
   useEffect(() => {
     if (visible) {
-      if (ragEnabled) {
-        onToggleRag(true);
-      } else {
-        onToggleRag(false);
-      }
+      onToggleRag(false);
       setLoading(true);
       setError(null);
       setFileContent('');
@@ -206,7 +202,12 @@ export default function TextFileViewerModal({
                   {ragEnabled ? (
                     <View style={styles.ragRow}>
                       <View style={styles.ragTextContainer}>
-                        <Text style={[styles.ragTitle, { color: isDark ? '#ffffff' : '#333333' }]}>Use RAG</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={[styles.ragTitle, { color: isDark ? '#ffffff' : '#333333' }]}>Use RAG</Text>
+                          <View style={{ backgroundColor: '#660880', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                            <Text style={{ color: '#ffffff', fontSize: 9, fontWeight: '700', letterSpacing: 0.5 }}>BETA</Text>
+                          </View>
+                        </View>
                         <Text style={[styles.ragDescription, { color: isDark ? '#bbbbbb' : '#666666' }]}>Store this file for smarter answers in this chat.</Text>
                       </View>
                       <Switch

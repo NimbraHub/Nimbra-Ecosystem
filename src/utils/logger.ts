@@ -1,23 +1,39 @@
-interface LogEntry {
+export interface LogMetadata {
+  model?: string;
+  messages?: Array<{ role: string; content: string }>;
+  response?: string;
+  params?: Record<string, any>;
+  duration?: number;
+  stream?: boolean;
+  endpoint?: string;
+  status?: number;
+  streamId?: string;
+  streaming?: boolean;
+}
+
+export interface LogEntry {
   timestamp: number;
   level: string;
   msg: string;
   category?: string;
+  metadata?: LogMetadata;
 }
 
 class ServerLogger {
   private logEntries: LogEntry[] = [];
   private maxLogs = 1000;
+  private activeStreams: Map<string, number> = new Map();
 
   constructor() {
   }
 
-  private addLogEntry(level: string, message: string, category: string = 'server') {
+  private addLogEntry(level: string, message: string, category: string = 'server', metadata?: LogMetadata) {
     const entry: LogEntry = {
       timestamp: Date.now(),
       level,
       msg: message,
       category,
+      ...(metadata ? { metadata } : {}),
     };
 
     this.logEntries.unshift(entry);
@@ -56,6 +72,68 @@ class ServerLogger {
   async clearLogs(): Promise<void> {
     this.logEntries = [];
     this.info('logs_cleared', 'system');
+  }
+
+  logInference(data: {
+    model: string;
+    endpoint: string;
+    messages: Array<{ role: string; content: string }>;
+    params?: Record<string, any>;
+    stream?: boolean;
+    response?: string;
+    duration?: number;
+    status?: number;
+  }) {
+    const label = data.response ? 'inference_complete' : 'inference_request';
+    const meta: LogMetadata = {
+      model: data.model,
+      endpoint: data.endpoint,
+      messages: data.messages,
+      params: data.params,
+      stream: data.stream,
+      response: data.response,
+      duration: data.duration,
+      status: data.status,
+    };
+    this.addLogEntry('info', `${label} model:${data.model} endpoint:${data.endpoint}`, 'inference', meta);
+  }
+
+  startStream(streamId: string, model: string, endpoint: string, messages: Array<{ role: string; content: string }>, params?: Record<string, any>) {
+    const meta: LogMetadata = {
+      model,
+      endpoint,
+      messages,
+      params,
+      stream: true,
+      streamId,
+      streaming: true,
+      response: '',
+    };
+    this.addLogEntry('info', `stream_active model:${model}`, 'inference', meta);
+    this.activeStreams.set(streamId, 0);
+  }
+
+  appendStreamToken(streamId: string, token: string) {
+    const idx = this.logEntries.findIndex(e => e.metadata?.streamId === streamId && e.metadata?.streaming);
+    if (idx === -1) return;
+    const entry = this.logEntries[idx];
+    if (entry.metadata) {
+      entry.metadata.response = (entry.metadata.response || '') + token;
+    }
+  }
+
+  endStream(streamId: string, duration: number, status: number) {
+    const idx = this.logEntries.findIndex(e => e.metadata?.streamId === streamId && e.metadata?.streaming);
+    if (idx === -1) return;
+    const entry = this.logEntries[idx];
+    if (entry.metadata) {
+      entry.metadata.streaming = false;
+      entry.metadata.duration = duration;
+      entry.metadata.status = status;
+      entry.msg = `inference_complete model:${entry.metadata.model}`;
+      entry.timestamp = Date.now();
+    }
+    this.activeStreams.delete(streamId);
   }
 
   logServerStart(port: number, url: string) {

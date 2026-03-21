@@ -607,7 +607,7 @@ export default function LocalServerScreen() {
                   What is this?
                 </Text>
                 <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
-                  Share your InferrLM chat interface with other devices on your WiFi network. Perfect for accessing your AI assistant from computers, tablets, or other phones.
+                  Share your InferrLM chat interface with other devices on your WiFi network. Perfect for accessing your local models from computers, tablets, or other phones.
                 </Text>
               </View>
             </View>

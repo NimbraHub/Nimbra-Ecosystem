@@ -101,7 +101,7 @@ export default function ChatInput({
   const [pendingMultimodalAction, setPendingMultimodalAction] = useState<'camera' | 'file' | null>(null);
   const [pendingFileForMultimodal, setPendingFileForMultimodal] = useState<{uri: string, name?: string} | null>(null);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
-  const [useRagForUpload, setUseRagForUpload] = useState(true);
+  const [useRagForUpload, setUseRagForUpload] = useState(false);
   
   const inputRef = useRef<TextInput>(null);
   const attachmentMenuAnim = useRef(new Animated.Value(0)).current;
@@ -189,24 +189,9 @@ export default function ChatInput({
     }
   }, [showAttachmentMenu]);
 
-  const ensureRagToggleDefault = useCallback(async () => {
-    if (!ragEnabledForCurrentModel) {
-      setUseRagForUpload(false);
-      return;
-    }
-    if (ragToggleDisabled) {
-      setUseRagForUpload(true);
-      return;
-    }
-    try {
-      const enabled = await RAGService.isEnabled();
-      if (!enabled) {
-        await RAGService.setEnabled(true);
-      }
-    } catch (error) {
-    }
-    setUseRagForUpload(true);
-  }, [ragEnabledForCurrentModel, ragToggleDisabled]);
+  const ensureRagToggleDefault = useCallback(() => {
+    setUseRagForUpload(false);
+  }, []);
 
   useEffect(() => {
     ensureRagToggleDefault();
@@ -901,12 +886,6 @@ export default function ChatInput({
                 },
               ]}
             >
-              <View style={styles.experimentalTag}>
-                <Text style={[styles.experimentalText, { color: isDark ? '#ffb74d' : '#f57c00' }]}>
-                  EXPERIMENTAL
-                </Text>
-              </View>
-              
               <TouchableOpacity style={styles.attachmentMenuItem} onPress={pickDocument}>
                 <View style={[styles.attachmentMenuIcon, { backgroundColor: '#4285f4' }]}>
                   <MaterialCommunityIcons name="file-document-outline" size={20} color="#ffffff" />
@@ -1327,20 +1306,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textAlign: 'center',
     lineHeight: 20,
-  },
-  experimentalTag: {
-    position: 'absolute',
-    top: -8,
-    left: 12,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  experimentalText: {
-    fontSize: 10,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   editingActions: {
     flexDirection: 'row',

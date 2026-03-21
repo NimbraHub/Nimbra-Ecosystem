@@ -39,6 +39,8 @@ export class MessageProcessingService {
     const currentChat = chatManager.getCurrentChat();
     if (!currentChat) return;
 
+    console.log('process_message_start', { provider: activeProvider, chatId: currentChat.id, messageCount: currentChat.messages.length });
+
     try {
       this.callbacks.setIsRegenerating(true);
       
@@ -627,9 +629,17 @@ export class MessageProcessingService {
     let firstTokenTime: number | null = null;
     let updateCounter = 0;
 
+    console.log('local_model_start', { messageId, skipRag, msgCount: processedMessages.length });
+    console.log('local_model_settings', { systemPrompt: settings.systemPrompt, temperature: settings.temperature, maxTokens: settings.maxTokens });
+
     const streamCallback = (token: string) => {
       if (this.cancelGenerationRef.current) {
+        console.log('local_stream_cancelled');
         return false;
+      }
+
+      if (tokenCount <= 5 || tokenCount % 50 === 0) {
+        console.log(`local_token[${tokenCount}]`, JSON.stringify(token), { isThinking });
       }
 
       if (firstTokenTime === null && !isThinking && token.trim().length > 0 && !token.includes('<think>') && !token.includes('</think>')) {
@@ -638,18 +648,20 @@ export class MessageProcessingService {
 
       if (token.includes('<think>')) {
         isThinking = true;
+        console.log('local_thinking_start');
         return true;
       }
       if (token.includes('</think>')) {
         isThinking = false;
+        console.log('local_thinking_end', { thinkingLength: thinking.length });
         return true;
       }
 
-      tokenCount++;
       if (isThinking) {
         thinking += token;
         this.callbacks.setStreamingThinking(thinking.trim());
       } else {
+        tokenCount++;
         fullResponse += token;
         this.callbacks.setStreamingMessage(fullResponse);
       }
@@ -725,6 +737,12 @@ export class MessageProcessingService {
       
       return { role: msg.role, content };
     }) as RAGMessage[];
+
+    console.log('local_base_messages_dump:');
+    baseMessages.forEach((msg, i) => {
+      console.log(`  base[${i}:${msg.role}] ${msg.content}`);
+    });
+
     let usedRAG = false;
     const chatId = chatManager.getCurrentChatId();
 
@@ -754,6 +772,7 @@ export class MessageProcessingService {
     }
 
     if (!usedRAG) {
+      console.log('local_gen_direct', { baseMessageCount: baseMessages.length });
       await engineService.mgr().gen(
         baseMessages as any,
         {
@@ -761,6 +780,12 @@ export class MessageProcessingService {
           settings
         }
       );
+    }
+
+    console.log('local_model_done', { tokenCount, responseLength: fullResponse.length, thinkingLength: thinking.length, cancelled: this.cancelGenerationRef.current });
+    console.log('local_response:', fullResponse);
+    if (thinking) {
+      console.log('local_thinking:', thinking);
     }
 
     if (!this.cancelGenerationRef.current) {
@@ -847,6 +872,7 @@ export class MessageProcessingService {
 
   private async shouldSkipRagForInput(messages: Array<{ role: string; content: string }>): Promise<boolean> {
     let lastUserText = '';
+    let isFileMessage = false;
 
     for (let index = messages.length - 1; index >= 0; index -= 1) {
       const entry = messages[index];
@@ -858,8 +884,10 @@ export class MessageProcessingService {
         const parsed = JSON.parse(entry.content);
         if (parsed?.type === 'ocr_result') {
           lastUserText = String(parsed?.userPrompt || '').trim();
+          isFileMessage = true;
         } else if (parsed?.type === 'file_upload') {
           lastUserText = String(parsed?.userContent || '').trim();
+          isFileMessage = true;
         } else {
           lastUserText = String(entry.content || '').trim();
         }
@@ -872,11 +900,11 @@ export class MessageProcessingService {
     const compactText = lastUserText.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
     const tokenCount = compactText.length > 0 ? compactText.split(/\s+/).length : 0;
 
-    if (compactText.length <= 4 || tokenCount <= 1) {
+    if (!isFileMessage && (compactText.length <= 4 || tokenCount <= 1)) {
       return true;
     }
 
-    if (/^(hi|hey|hello|yo|sup|hola|hii+)$/.test(compactText)) {
+    if (!isFileMessage && /^(hi|hey|hello|yo|sup|hola|hii+)$/.test(compactText)) {
       return true;
     }
 

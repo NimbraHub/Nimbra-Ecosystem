@@ -152,10 +152,8 @@ class LlamaManager {
   private isContextSpaceError(error: unknown): boolean {
     const payload = this.serializeError(error);
     const text = JSON.stringify(payload).toLowerCase();
-    return text.includes('not enough context space') ||
-      (text.includes('context') && text.includes('space')) ||
-      text.includes('context window') ||
-      text.includes('prompt is too long');
+    return text.includes('context_length_exceeded') ||
+      text.includes('context is full');
   }
 
   private toTextOnlyContent(content: any): string {
@@ -658,7 +656,7 @@ class LlamaManager {
           messages: messagesForCompletion,
         };
 
-        await this.context!.completion(
+        const result = await this.context!.completion(
           completionParams,
           (data) => {
             if (this.isCancelled) {
@@ -679,6 +677,10 @@ class LlamaManager {
             return true;
           }
         );
+
+        if (result.context_full) {
+          throw new Error('CONTEXT_LENGTH_EXCEEDED');
+        }
       };
 
       try {
@@ -707,7 +709,15 @@ class LlamaManager {
             compactCount: compactMessages.length,
             minimalCount: minimalMessages.length,
           });
-          await runCompletion(minimalMessages, 'minimal-retry');
+
+          try {
+            await runCompletion(minimalMessages, 'minimal-retry');
+          } catch (minimalError) {
+            if (this.isContextSpaceError(minimalError)) {
+              throw new Error('CONTEXT_LENGTH_EXCEEDED');
+            }
+            throw minimalError;
+          }
         }
       }
 

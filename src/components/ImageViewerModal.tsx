@@ -62,13 +62,9 @@ export default function ImageViewerModal({
 
   useEffect(() => {
     if (visible) {
-      if (ragEnabled) {
-        onToggleRag(true);
-      } else {
-        onToggleRag(false);
-      }
+      onToggleRag(false);
     }
-  }, [visible, onToggleRag, ragEnabled]);
+  }, [visible, onToggleRag]);
 
   const handleSend = async () => {
     if ((!onUpload && !onImageUpload) || !imagePath || isProcessing || !processingMode) return;
@@ -182,7 +178,12 @@ export default function ImageViewerModal({
               ]}
             >
               <View style={styles.ragTextContainer}>
-                <Text style={[styles.ragTitle, { color: themeColors.text }]}>Use RAG</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={[styles.ragTitle, { color: themeColors.text }]}>Use RAG</Text>
+                  <View style={{ backgroundColor: '#660880', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                    <Text style={{ color: '#ffffff', fontSize: 9, fontWeight: '700', letterSpacing: 0.5 }}>BETA</Text>
+                  </View>
+                </View>
                 <Text style={[styles.ragDescription, { color: isDark ? '#bbbbbb' : '#666666' }]}>Store this file for smarter answers in this chat.</Text>
               </View>
               <Switch

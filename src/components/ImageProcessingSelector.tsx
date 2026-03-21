@@ -55,9 +55,9 @@ export default function ImageProcessingSelector({
 
   useEffect(() => {
     if (onToggleRag) {
-      onToggleRag(ragEnabled);
+      onToggleRag(false);
     }
-  }, [onToggleRag, ragEnabled]);
+  }, [onToggleRag]);
 
   const loadStoredModels = async () => {
     try {
@@ -276,7 +276,12 @@ export default function ImageProcessingSelector({
           ]}
         >
           <View style={styles.ragTextContainer}>
-            <Text style={[styles.ragTitle, { color: themeColors.text }]}>Use RAG</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[styles.ragTitle, { color: themeColors.text }]}>Use RAG</Text>
+              <View style={{ backgroundColor: '#660880', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                <Text style={{ color: '#ffffff', fontSize: 9, fontWeight: '700', letterSpacing: 0.5 }}>BETA</Text>
+              </View>
+            </View>
             <Text style={[styles.ragDescription, { color: isDark ? '#bbbbbb' : '#666666' }]}>Store extracted text for this chat.</Text>
           </View>
           <Switch
