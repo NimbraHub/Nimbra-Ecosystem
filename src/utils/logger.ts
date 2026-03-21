@@ -7,6 +7,8 @@ export interface LogMetadata {
   stream?: boolean;
   endpoint?: string;
   status?: number;
+  streamId?: string;
+  streaming?: boolean;
 }
 
 export interface LogEntry {
@@ -20,6 +22,7 @@ export interface LogEntry {
 class ServerLogger {
   private logEntries: LogEntry[] = [];
   private maxLogs = 1000;
+  private activeStreams: Map<string, number> = new Map();
 
   constructor() {
   }
@@ -93,6 +96,45 @@ class ServerLogger {
       status: data.status,
     };
     this.addLogEntry('info', `${label} model:${data.model} endpoint:${data.endpoint}`, 'inference', meta);
+  }
+
+  startStream(streamId: string, model: string, endpoint: string, messages: Array<{ role: string; content: string }>, params?: Record<string, any>) {
+    const meta: LogMetadata = {
+      model,
+      endpoint,
+      messages,
+      params,
+      stream: true,
+      streamId,
+      streaming: true,
+      response: '',
+    };
+    this.addLogEntry('info', `stream_active model:${model}`, 'inference', meta);
+    this.activeStreams.set(streamId, 0);
+  }
+
+  appendStreamToken(streamId: string, token: string) {
+    const idx = this.logEntries.findIndex(e => e.metadata?.streamId === streamId && e.metadata?.streaming);
+    if (idx === -1) return;
+    const entry = this.logEntries[idx];
+    if (entry.metadata) {
+      entry.metadata.response = (entry.metadata.response || '') + token;
+      entry.timestamp = Date.now();
+    }
+  }
+
+  endStream(streamId: string, duration: number, status: number) {
+    const idx = this.logEntries.findIndex(e => e.metadata?.streamId === streamId && e.metadata?.streaming);
+    if (idx === -1) return;
+    const entry = this.logEntries[idx];
+    if (entry.metadata) {
+      entry.metadata.streaming = false;
+      entry.metadata.duration = duration;
+      entry.metadata.status = status;
+      entry.msg = `inference_complete model:${entry.metadata.model}`;
+      entry.timestamp = Date.now();
+    }
+    this.activeStreams.delete(streamId);
   }
 
   logServerStart(port: number, url: string) {
