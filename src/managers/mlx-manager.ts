@@ -197,6 +197,13 @@ class MlxManager implements InferenceManager {
     }
   }
 
+  stop() {
+    try {
+      LLM.stop();
+      console.log('mlx_stop');
+    } catch {}
+  }
+
   async gen(messages: Msg[], opts?: GenOpts) {
     console.log('mlx_gen_start', { loaded: this.state.loaded, modelId: this.state.modelId, messageCount: messages.length });
 
@@ -205,17 +212,25 @@ class MlxManager implements InferenceManager {
       throw new Error('engine_not_ready');
     }
 
+    /*
+     Cancel any previous generation before starting a new one.
+     Without this, concurrent Swift tasks corrupt the model's
+     shared KV-cache context, producing empty or garbage output.
+    */
+    this.stop();
+
     console.log('mlx_gen_messages_dump:');
     messages.forEach((msg, i) => {
       const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
       console.log(`  [${i}:${msg.role}] ${content.substring(0, 200)}`);
     });
 
+    if (opts?.settings?.systemPrompt !== undefined) {
+      LLM.systemPrompt = opts.settings.systemPrompt;
+    }
+
     const historyBefore = LLM.getHistory();
     console.log('mlx_history_before_clear', { count: historyBefore.length });
-    historyBefore.forEach((msg, i) => {
-      console.log(`  hist[${i}:${msg.role}] ${msg.content.substring(0, 120)}`);
-    });
 
     LLM.clearHistory();
     console.log('mlx_history_after_clear', { count: LLM.getHistory().length });
@@ -225,22 +240,22 @@ class MlxManager implements InferenceManager {
     console.log('mlx_gen_prompt', { promptLength: prompt.length, role: lastMessage.role, systemPrompt: LLM.systemPrompt.substring(0, 100) });
     console.log('mlx_gen_prompt_full:', prompt.substring(0, 500));
 
-    if (opts?.settings?.systemPrompt !== undefined) {
-      LLM.systemPrompt = opts.settings.systemPrompt;
-    }
-
     let full = '';
     let tokenCount = 0;
+    let cancelled = false;
     await LLM.stream(prompt, token => {
+      if (cancelled) return;
       full += token;
       tokenCount++;
       if (tokenCount <= 10 || tokenCount % 50 === 0) {
         console.log(`mlx_token[${tokenCount}]`, JSON.stringify(token));
       }
       if (opts?.onToken) {
-        const continueStreaming = opts.onToken(token);
-        if (continueStreaming === false) {
+        const cont = opts.onToken(token);
+        if (cont === false) {
           console.log('mlx_stream_cancelled');
+          cancelled = true;
+          this.stop();
         }
       }
     });
