@@ -150,23 +150,6 @@ export default function ServerLogsScreen() {
     }
   };
 
-  const getLevelIcon = (level: string) => {
-    const normalized = level.toUpperCase();
-
-    switch (normalized) {
-      case 'ERROR':
-        return 'alert-circle';
-      case 'WARN':
-        return 'alert';
-      case 'INFO':
-        return 'information';
-      case 'DEBUG':
-        return 'bug';
-      default:
-        return 'circle';
-    }
-  };
-
   const truncate = (text: string, max: number) => {
     if (text.length <= max) return text;
     return text.slice(0, max) + '...';
@@ -179,21 +162,33 @@ export default function ServerLogsScreen() {
   });
 
   const renderParams = (params: Record<string, any>) => {
-    return Object.entries(params).map(([key, val]) => (
-      <View key={key} style={styles.paramRow}>
-        <Text style={styles.paramKey}>{key}</Text>
-        <Text style={styles.paramVal}>{Array.isArray(val) ? val.join(', ') : String(val)}</Text>
-      </View>
-    ));
+    const entries = Object.entries(params);
+    return entries.map(([key, val], i) => {
+      const prefix = i < entries.length - 1 ? '  |  ' : '  |  ';
+      const value = Array.isArray(val) ? val.join(', ') : String(val);
+      return (
+        <Text key={key} style={s.mono}>
+          <Text style={s.dim}>{prefix}</Text>
+          <Text style={s.paramKey}>{key}</Text>
+          <Text style={s.dim}>=</Text>
+          <Text style={s.text}>{value}</Text>
+        </Text>
+      );
+    });
   };
 
   const renderMessages = (messages: Array<{ role: string; content: string }>) => {
     return messages.map((msg, i) => {
       const roleColor = msg.role === 'system' ? '#FF9F43' : msg.role === 'assistant' ? '#52D274' : '#4D7BFF';
+      const prefix = '  |  ';
       return (
-        <View key={`${msg.role}-${i}`} style={styles.msgEntry}>
-          <Text style={[styles.msgRole, { color: roleColor }]}>{msg.role}</Text>
-          <Text style={styles.msgContent}>{truncate(maskSensitiveData(msg.content), 500)}</Text>
+        <View key={`${msg.role}-${i}`}>
+          <Text style={s.mono}>
+            <Text style={s.dim}>{prefix}</Text>
+            <Text style={{ color: roleColor }}>{msg.role}</Text>
+            <Text style={s.dim}>: </Text>
+            <Text style={s.text}>{truncate(maskSensitiveData(msg.content), 500)}</Text>
+          </Text>
         </View>
       );
     });
@@ -203,76 +198,71 @@ export default function ServerLogsScreen() {
     const meta = log.metadata;
     if (!meta) return null;
     const expanded = expandedIds.has(log.id);
+    const status = meta.streaming ? 'STREAM' : meta.response ? 'DONE' : 'REQ';
+    const statusColor = meta.streaming ? '#FF9F43' : meta.response ? '#52D274' : '#4D7BFF';
+    const arrow = expanded ? 'v' : '>';
+    const dur = meta.duration != null ? ` ${meta.duration}ms` : '';
 
     return (
       <TouchableOpacity
-        activeOpacity={0.7}
+        activeOpacity={0.8}
         onPress={() => toggleExpand(log.id)}
-        style={[styles.inferenceEntry, { borderLeftColor: meta.streaming ? '#FF9F43' : meta.response ? '#52D274' : '#4D7BFF' }]}
       >
-        <View style={styles.inferenceHeader}>
-          <View style={styles.inferenceHeaderLeft}>
-            <MaterialCommunityIcons
-              name={meta.streaming ? 'lightning-bolt' : meta.response ? 'check-circle' : 'arrow-right-circle'}
-              size={14}
-              color={meta.streaming ? '#FF9F43' : meta.response ? '#52D274' : '#4D7BFF'}
-            />
-            <Text style={styles.inferenceTitle}>
-              {meta.streaming ? 'Streaming' : meta.response ? 'Completion' : 'Request'}
-            </Text>
-            <Text style={styles.inferenceModel}>{meta.model}</Text>
-            {meta.stream && <Text style={styles.streamBadge}>STREAM</Text>}
-            {meta.streaming && <Text style={styles.liveBadge}>LIVE</Text>}
-          </View>
-          <View style={styles.inferenceHeaderRight}>
-            {meta.duration != null && (
-              <Text style={styles.durationText}>{meta.duration}ms</Text>
-            )}
-            <Text style={styles.logTimestamp}>{log.timestamp}</Text>
-            <MaterialCommunityIcons
-              name={expanded ? 'chevron-up' : 'chevron-down'}
-              size={16}
-              color="#666"
-            />
-          </View>
-        </View>
+        <Text style={s.mono}>
+          <Text style={s.ts}>[{log.timestamp}]</Text>
+          <Text style={{ color: statusColor }}>{` [${status}]`}</Text>
+          <Text style={s.dim}>{` ${arrow} `}</Text>
+          <Text style={s.text}>{meta.model || 'unknown'}</Text>
+          {meta.endpoint && <Text style={s.dim}>{` ${meta.endpoint}`}</Text>}
+          {meta.stream && <Text style={s.dim}> stream</Text>}
+          {dur ? <Text style={s.green}>{dur}</Text> : null}
+        </Text>
 
         {expanded && (
-          <View style={styles.inferenceBody}>
+          <View style={s.details}>
             {meta.endpoint && (
-              <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>Endpoint</Text>
-                <Text style={styles.detailValue}>{meta.endpoint}</Text>
-              </View>
+              <Text style={s.mono}>
+                <Text style={s.dim}>{'  |-- '}</Text>
+                <Text style={s.label}>endpoint </Text>
+                <Text style={s.text}>{meta.endpoint}</Text>
+              </Text>
+            )}
+
+            {meta.status != null && (
+              <Text style={s.mono}>
+                <Text style={s.dim}>{'  |-- '}</Text>
+                <Text style={s.label}>status </Text>
+                <Text style={[s.text, { color: meta.status < 400 ? '#52D274' : '#FF5C5C' }]}>{meta.status}</Text>
+              </Text>
             )}
 
             {meta.params && Object.keys(meta.params).length > 0 && (
-              <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>Parameters</Text>
-                <View style={styles.paramsGrid}>{renderParams(meta.params)}</View>
+              <View>
+                <Text style={s.mono}>
+                  <Text style={s.dim}>{'  |-- '}</Text>
+                  <Text style={s.label}>params</Text>
+                </Text>
+                {renderParams(meta.params)}
               </View>
             )}
 
             {meta.messages && meta.messages.length > 0 && (
-              <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>Messages ({meta.messages.length})</Text>
+              <View>
+                <Text style={s.mono}>
+                  <Text style={s.dim}>{'  |-- '}</Text>
+                  <Text style={s.label}>messages ({meta.messages.length})</Text>
+                </Text>
                 {renderMessages(meta.messages)}
               </View>
             )}
 
             {meta.response && (
-              <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>Response</Text>
-                <Text style={styles.responseText}>{truncate(maskSensitiveData(meta.response), 1000)}</Text>
-              </View>
-            )}
-
-            {meta.status != null && (
-              <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>Status</Text>
-                <Text style={[styles.detailValue, { color: meta.status < 400 ? '#52D274' : '#FF5C5C' }]}>
-                  {meta.status}
+              <View>
+                <Text style={s.mono}>
+                  <Text style={s.dim}>{'  `-- '}</Text>
+                  <Text style={s.label}>response </Text>
                 </Text>
+                <Text style={[s.mono, s.resp]}>{'      ' + truncate(maskSensitiveData(meta.response), 1000)}</Text>
               </View>
             )}
           </View>
@@ -282,14 +272,14 @@ export default function ServerLogsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={s.container}>
       <AppHeader
         title="Server Logs"
         showBackButton
         onBackPress={() => navigation.goBack()}
         rightButtons={
           <TouchableOpacity
-            style={styles.headerButton}
+            style={s.headerBtn}
             onPress={() => setClearDialogVisible(true)}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
@@ -298,76 +288,59 @@ export default function ServerLogsScreen() {
         }
       />
 
-      <View style={styles.section}>
-        <View style={styles.filterRow}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
-            {FILTERS.map(f => (
-              <TouchableOpacity
-                key={f}
-                style={[styles.filterChip, filter === f && styles.filterChipActive]}
-                onPress={() => setFilter(f)}
-              >
-                <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-                  {f.toUpperCase()}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          <Text style={styles.countText}>{filteredLogs.length}</Text>
-        </View>
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.logsContainer}
-          contentContainerStyle={styles.logsContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={handleRefresh}
-              tintColor="#FFFFFF"
-              colors={['#FFFFFF']}
-              progressBackgroundColor="#101010"
-            />
-          }
-          showsVerticalScrollIndicator
-        >
-          {filteredLogs.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="text-box-outline" size={48} color="#FFFFFF" />
-              <Text style={styles.emptyText}>No logs available</Text>
-              <Text style={styles.emptySubtext}>
-                Server logs will appear here when generated
-              </Text>
-            </View>
-          ) : (
-            filteredLogs.map((log) => {
-              if (log.metadata) {
-                return <React.Fragment key={log.id}>{renderInference(log)}</React.Fragment>;
-              }
-
-              return (
-                <View key={log.id} style={[styles.logEntry, { borderLeftColor: getLevelColor(log.level) }]}>
-                  <Text style={styles.logLine}>
-                    <Text style={styles.logTimestamp}>[{log.timestamp}]</Text>
-                    <Text style={[styles.logLevelTag, { color: getLevelColor(log.level) }]}>{` [${log.level}]`}</Text>
-                    {log.category && (
-                      <Text style={styles.logCategoryTag}>{` [${log.category}]`}</Text>
-                    )}
-                    <Text style={styles.logMessage}>{` ${log.message}`}</Text>
-                  </Text>
-                </View>
-              );
-            })
-          )}
-        </ScrollView>
+      <View style={s.filterBar}>
+        {FILTERS.map(f => (
+          <TouchableOpacity key={f} onPress={() => setFilter(f)}>
+            <Text style={[s.filterTab, filter === f && s.filterTabActive]}>
+              {f.toUpperCase()}
+            </Text>
+          </TouchableOpacity>
+        ))}
+        <Text style={s.countText}>{filteredLogs.length}</Text>
       </View>
 
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.footerButton} onPress={handleRefresh}>
-          <MaterialCommunityIcons name="refresh" size={20} color="#FFFFFF" />
-          <Text style={styles.footerButtonText}>Refresh</Text>
+      <ScrollView
+        ref={scrollViewRef}
+        style={s.logScroll}
+        contentContainerStyle={s.logScrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor="#555"
+            colors={['#555']}
+            progressBackgroundColor="#000"
+          />
+        }
+      >
+        {filteredLogs.length === 0 ? (
+          <Text style={[s.mono, s.dim, { textAlign: 'center', marginTop: 40 }]}>
+            {'-- no logs --'}
+          </Text>
+        ) : (
+          filteredLogs.map((log) => {
+            if (log.metadata) {
+              return <React.Fragment key={log.id}>{renderInference(log)}</React.Fragment>;
+            }
+
+            return (
+              <Text key={log.id} style={s.mono}>
+                <Text style={s.ts}>[{log.timestamp}]</Text>
+                <Text style={[s.level, { color: getLevelColor(log.level) }]}>{` [${log.level}]`}</Text>
+                {log.category && <Text style={s.cat}>{` [${log.category}]`}</Text>}
+                <Text style={s.text}>{` ${log.message}`}</Text>
+              </Text>
+            );
+          })
+        )}
+      </ScrollView>
+
+      <View style={s.footer}>
+        <TouchableOpacity onPress={handleRefresh}>
+          <Text style={s.footerLink}>[refresh]</Text>
         </TouchableOpacity>
-        <View style={styles.autoScrollRow}>
-          <Text style={styles.autoScrollText}>Auto-scroll</Text>
+        <View style={s.autoRow}>
+          <Text style={s.dim}>auto-scroll</Text>
           <Switch
             value={autoScroll}
             onValueChange={setAutoScroll}
@@ -391,12 +364,12 @@ export default function ServerLogsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#000',
   },
-  headerButton: {
+  headerBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -404,272 +377,98 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  section: {
-    flex: 1,
-    marginHorizontal: 16,
-    marginTop: 8,
-  },
-  filterRow: {
+  filterBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1A1A1A',
   },
-  filterContent: {
-    gap: 6,
-    paddingRight: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 14,
-    backgroundColor: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#222',
-  },
-  filterChipActive: {
-    backgroundColor: '#1A2940',
-    borderColor: '#4D7BFF',
-  },
-  filterText: {
+  filterTab: {
+    fontFamily: 'monospace',
     fontSize: 11,
-    fontWeight: '600',
-    color: '#888',
-    letterSpacing: 0.5,
+    color: '#555',
   },
-  filterTextActive: {
-    color: '#4D7BFF',
+  filterTabActive: {
+    color: '#FFF',
+    textDecorationLine: 'underline',
   },
   countText: {
+    fontFamily: 'monospace',
     fontSize: 11,
-    fontWeight: '600',
-    color: '#555',
-    marginLeft: 6,
+    color: '#333',
+    marginLeft: 'auto',
   },
-  logsContainer: {
+  logScroll: {
     flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#111111',
-    backgroundColor: '#050505',
+    backgroundColor: '#000',
   },
-  logsContent: {
+  logScrollContent: {
     flexGrow: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    padding: 10,
+    gap: 2,
   },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 80,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#A0A0A0',
-    textAlign: 'center',
-    paddingHorizontal: 24,
-  },
-  logEntry: {
-    paddingVertical: 6,
-    borderLeftWidth: 2,
-    marginBottom: 4,
-  },
-  logLine: {
+  mono: {
     fontFamily: 'monospace',
-    fontSize: 12,
+    fontSize: 11,
     lineHeight: 16,
-    color: '#E4E4E4',
-  },
-  logTimestamp: {
-    color: '#4D7BFF',
-    fontSize: 11,
-  },
-  logLevelTag: {
-    fontWeight: '700',
-  },
-  logCategoryTag: {
-    color: '#52D274',
-  },
-  logMessage: {
-    color: '#E4E4E4',
-  },
-  inferenceEntry: {
-    borderLeftWidth: 3,
-    borderRadius: 8,
-    backgroundColor: '#0A0A0A',
-    marginBottom: 6,
-    overflow: 'hidden',
-  },
-  inferenceHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  inferenceHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flex: 1,
-  },
-  inferenceHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  inferenceTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#E4E4E4',
-  },
-  inferenceModel: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#888',
-    backgroundColor: '#1A1A1A',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  streamBadge: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#FF9F43',
-    backgroundColor: '#2A1A00',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 3,
-    overflow: 'hidden',
-    letterSpacing: 0.5,
-  },
-  liveBadge: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#52D274',
-    backgroundColor: '#0A2A0A',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 3,
-    overflow: 'hidden',
-    letterSpacing: 0.5,
-  },
-  durationText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#52D274',
-  },
-  inferenceBody: {
-    paddingHorizontal: 10,
-    paddingBottom: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#151515',
-  },
-  detailSection: {
-    marginTop: 10,
-  },
-  detailLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    color: '#666',
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  detailValue: {
-    fontSize: 12,
-    fontFamily: 'monospace',
     color: '#CCC',
   },
-  paramsGrid: {
-    backgroundColor: '#0F0F0F',
-    borderRadius: 6,
-    padding: 8,
+  ts: {
+    color: '#555',
   },
-  paramRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 3,
+  level: {
+    fontWeight: '700',
+  },
+  cat: {
+    color: '#52D274',
+  },
+  text: {
+    color: '#CCC',
+  },
+  dim: {
+    color: '#555',
+    fontFamily: 'monospace',
+    fontSize: 11,
+  },
+  label: {
+    color: '#4D7BFF',
+    fontFamily: 'monospace',
+    fontSize: 11,
+  },
+  green: {
+    color: '#52D274',
   },
   paramKey: {
-    fontSize: 11,
-    fontFamily: 'monospace',
     color: '#4D7BFF',
-  },
-  paramVal: {
+    fontFamily: 'monospace',
     fontSize: 11,
-    fontFamily: 'monospace',
-    color: '#CCC',
   },
-  msgEntry: {
-    backgroundColor: '#0F0F0F',
-    borderRadius: 6,
-    padding: 8,
-    marginBottom: 4,
-  },
-  msgRole: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    marginBottom: 3,
-  },
-  msgContent: {
-    fontSize: 12,
-    fontFamily: 'monospace',
-    lineHeight: 17,
-    color: '#D0D0D0',
-  },
-  responseText: {
-    fontSize: 12,
-    fontFamily: 'monospace',
-    lineHeight: 17,
+  resp: {
     color: '#52D274',
-    backgroundColor: '#0A1A0A',
-    borderRadius: 6,
-    padding: 8,
+  },
+  details: {
+    marginBottom: 2,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: '#1F1F1F',
-    backgroundColor: '#050505',
+    borderTopColor: '#1A1A1A',
   },
-  footerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1A1A1A',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 24,
+  footerLink: {
+    fontFamily: 'monospace',
+    fontSize: 12,
+    color: '#4D7BFF',
   },
-  footerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  autoScrollRow: {
+  autoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  autoScrollText: {
-    color: '#A0A0A0',
-    fontSize: 12,
-    fontWeight: '500',
   },
 });
