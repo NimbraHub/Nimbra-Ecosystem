@@ -110,33 +110,44 @@ export class OpenAIService {
       }
 
       if (parsed.type === 'file_upload' && parsed.metadata?.remoteFileUri) {
+        const fileName = parsed.fileName || 'document';
+        const mimeType = parsed.metadata.mimeType || 'application/octet-stream';
+        const userContent = parsed.userContent || `File uploaded: ${fileName}`;
+        const isPdf = mimeType === 'application/pdf';
+
+        if (isPdf) {
+          try {
+            const base64 = await FileSystem.readAsStringAsync(
+              parsed.metadata.remoteFileUri,
+              { encoding: FileSystem.EncodingType.Base64 }
+            );
+            return {
+              role: message.role,
+              content: [
+                {
+                  type: 'file',
+                  file: {
+                    filename: fileName,
+                    file_data: `data:${mimeType};base64,${base64}`,
+                  },
+                },
+                { type: 'text', text: userContent },
+              ],
+            };
+          } catch {
+          }
+        }
+
         try {
-          const base64 = await FileSystem.readAsStringAsync(
-            parsed.metadata.remoteFileUri,
-            { encoding: FileSystem.EncodingType.Base64 }
-          );
-          const fileName = parsed.fileName || 'document';
-          const mimeType = parsed.metadata.mimeType || 'application/octet-stream';
+          const text = await FileSystem.readAsStringAsync(parsed.metadata.remoteFileUri);
           return {
             role: message.role,
-            content: [
-              {
-                type: 'file',
-                file: {
-                  filename: fileName,
-                  file_data: `data:${mimeType};base64,${base64}`,
-                },
-              },
-              {
-                type: 'text',
-                text: parsed.userContent || `File uploaded: ${fileName}`,
-              },
-            ],
+            content: `--- ${fileName} ---\n${text}\n---\n\n${userContent}`,
           };
         } catch {
           return {
             role: message.role,
-            content: parsed.userContent || `File uploaded: ${parsed.fileName || 'document'}`,
+            content: userContent,
           };
         }
       }
