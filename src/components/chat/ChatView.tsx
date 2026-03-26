@@ -684,40 +684,45 @@ export default function ChatView({
                   </View>
                 ) : null}
                 
-                {item === messages[messages.length - 1] ? (
-                  <TouchableOpacity 
-                    style={[
-                      styles.regenerateButton,
-                      isRegenerating && styles.regenerateButtonDisabled
-                    ]}
-                    onPress={() => {
-                      if (!isRegenerating) {
-                        onRegenerateResponse();
-                      }
-                    }}
-                    disabled={isRegenerating}
-                  >
-                    {isRegenerating ? (
-                      <ActivityIndicator size="small" color={themeColors.secondaryText} />
-                    ) : (
-                      <>
-                        <MaterialCommunityIcons 
-                          name="refresh" 
-                          size={14} 
-                          color={themeColors.secondaryText}
-                        />
-                        <Text style={[styles.regenerateButtonText, { color: themeColors.secondaryText }]}>
-                          Regenerate
-                        </Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                ) : null}
               </View>
               ) : null}
             </View>
             );
           })() : null}
+
+          {item.role === 'assistant' && item === messages[messages.length - 1] && !isCurrentlyStreaming ? (
+            <View style={[styles.statsContainer, !stats ? { borderTopWidth: 0 } : undefined]}>
+              <View style={styles.statsRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.regenerateButton,
+                    isRegenerating && styles.regenerateButtonDisabled
+                  ]}
+                  onPress={() => {
+                    if (!isRegenerating) {
+                      onRegenerateResponse();
+                    }
+                  }}
+                  disabled={isRegenerating}
+                >
+                  {isRegenerating ? (
+                    <ActivityIndicator size="small" color={themeColors.secondaryText} />
+                  ) : (
+                    <>
+                      <MaterialCommunityIcons
+                        name="refresh"
+                        size={14}
+                        color={themeColors.secondaryText}
+                      />
+                      <Text style={[styles.regenerateButtonText, { color: themeColors.secondaryText }]}>
+                        Regenerate
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null}
         </View>
 
         {item.role === 'user' && branchInfo && branchInfo.total > 1 ? (
