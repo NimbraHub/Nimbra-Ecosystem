@@ -302,6 +302,16 @@ export default function ChatView({
           
           return parsedMessage.userContent || "";
         }
+
+        if (parsedMessage &&
+            parsedMessage.type === 'file_upload' &&
+            parsedMessage.metadata?.remoteFileUri) {
+          fileAttachment = {
+            name: parsedMessage.fileName || 'uploaded file',
+            type: parsedMessage.fileName?.split('.').pop()?.toLowerCase() || 'file',
+          };
+          return parsedMessage.userContent || '';
+        }
       } catch (e) {
       }
       
