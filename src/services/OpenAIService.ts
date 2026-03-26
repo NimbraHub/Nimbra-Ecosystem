@@ -1,10 +1,13 @@
 import { fs as FileSystem } from './fs';
+import type { Tool, ToolCall } from './tools/ToolRegistry';
+import { openAIImageAdapter, type ImageGenOptions, type GeneratedImage } from './adapters/OpenAIImageAdapter';
 
 type ChatMessage = {
   id: string;
   content: string;
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant' | 'system' | 'tool';
   thinking?: string;
+  toolCallId?: string;
   stats?: {
     duration: number;
     tokens: number;
@@ -16,7 +19,16 @@ export interface OpenAIRequestOptions {
   maxTokens?: number;
   topP?: number;
   model?: string;
+  tools?: Tool[];
 }
+
+export type OpenAIResponse = {
+  fullResponse: string;
+  tokenCount: number;
+  startTime: number;
+  toolCalls?: ToolCall[];
+  imageResult?: GeneratedImage;
+};
 
 export class OpenAIService {
   private apiKeyProvider: (provider: string) => Promise<string | null>;
@@ -89,6 +101,14 @@ export class OpenAIService {
         };
       }
       
+      if (parsed.type === 'file_upload' && parsed.metadata?.openaiFileId) {
+        const userContent = parsed.userContent || `File uploaded: ${parsed.fileName || 'file'}`;
+        return {
+          role: message.role,
+          content: `[File: ${parsed.fileName || 'uploaded file'} (id: ${parsed.metadata.openaiFileId})]\n\n${userContent}`,
+        };
+      }
+
       if (parsed.type === 'ocr_result') {
         const instruction = parsed.internalInstruction || '';
         const userPrompt = parsed.userPrompt || '';
@@ -99,6 +119,14 @@ export class OpenAIService {
         };
       }
     } catch (error) {
+    }
+
+    if (message.role === 'tool' && message.toolCallId) {
+      return {
+        role: 'tool',
+        tool_call_id: message.toolCallId,
+        content: message.content,
+      };
     }
     
     return {
@@ -112,11 +140,7 @@ export class OpenAIService {
     options: OpenAIRequestOptions = {},
     onToken?: (token: string) => boolean | void,
     provider = 'chatgpt'
-  ): Promise<{
-    fullResponse: string;
-    tokenCount: number;
-    startTime: number;
-  }> {
+  ): Promise<OpenAIResponse> {
     const startTime = Date.now();
     let tokenCount = 0;
     let fullResponse = '';
@@ -141,7 +165,7 @@ export class OpenAIService {
   const baseUrl = await this.baseUrlProvider(provider);
   const url = `${baseUrl}/chat/completions`;
       
-      const requestBody = {
+      const requestBody: Record<string, any> = {
         model,
         messages: formattedMessages,
         temperature,
@@ -149,6 +173,10 @@ export class OpenAIService {
         top_p: topP,
         stream: false
       };
+
+      if (options.tools && options.tools.length > 0) {
+        requestBody.tools = options.tools;
+      }
 
       const headers = {
         'Content-Type': 'application/json',
@@ -263,6 +291,23 @@ export class OpenAIService {
         }
       } else if (jsonResponse.choices && jsonResponse.choices.length > 0) {
         const choice = jsonResponse.choices[0];
+
+        if (choice.message?.tool_calls && choice.message.tool_calls.length > 0) {
+          const toolCalls: ToolCall[] = choice.message.tool_calls.map((tc: any) => ({
+            id: tc.id,
+            type: tc.type,
+            function: {
+              name: tc.function.name,
+              arguments: tc.function.arguments,
+            },
+          }));
+          return {
+            fullResponse: choice.message.content || '',
+            tokenCount: jsonResponse.usage?.completion_tokens || 0,
+            startTime,
+            toolCalls,
+          };
+        }
         
         if (choice.message && choice.message.content) {
           const text = choice.message.content;
@@ -322,5 +367,13 @@ export class OpenAIService {
     } catch (error) {
       throw error;
     }
+  }
+
+  async generateImage(
+    prompt: string,
+    options: ImageGenOptions = {},
+    provider = 'chatgpt'
+  ): Promise<GeneratedImage> {
+    return openAIImageAdapter.generate(prompt, options, provider);
   }
 } 
