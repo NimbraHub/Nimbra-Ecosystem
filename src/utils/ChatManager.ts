@@ -32,6 +32,7 @@ export type Chat = {
   branchPointIndex?: number;
   forkedFromChatId?: string;
   forkPointIndex?: number;
+  pinned?: boolean;
 };
 
 class ChatManager {
@@ -103,10 +104,27 @@ class ChatManager {
     return this.cache
       .filter(chat => chat.messages.length > 0 && !chat.parentChatId)
       .sort((a, b) => {
+        const aPinned = a.pinned ? 1 : 0;
+        const bPinned = b.pinned ? 1 : 0;
+        if (aPinned !== bPinned) return bPinned - aPinned;
         const aLatest = this.getLatestBranchTimestamp(a.id);
         const bLatest = this.getLatestBranchTimestamp(b.id);
         return bLatest - aLatest;
       });
+  }
+
+  async togglePin(chatId: string): Promise<boolean> {
+    try {
+      await this.ensureInitialized();
+      const chat = this.getChatById(chatId);
+      if (!chat) return false;
+      chat.pinned = !chat.pinned;
+      await this.saveChat(chat);
+      this.notifyListeners();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private getLatestBranchTimestamp(rootId: string): number {
