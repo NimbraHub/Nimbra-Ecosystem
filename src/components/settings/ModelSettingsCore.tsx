@@ -243,7 +243,7 @@ const ModelSettingsCore = ({
       )}
 
       {onToggleNoExtraBuffers && (
-        <View style={[styles.settingItem, styles.settingItemBottomBorder]}>
+        <View style={[styles.settingItem, styles.settingItemTopBorder, styles.settingItemBottomBorder]}>
           <View style={styles.settingLeft}>
             <View style={[styles.iconContainer, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}>
               <MaterialCommunityIcons name="memory" size={22} color={iconColor} />
@@ -277,6 +277,10 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   settingItemBorder: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(150, 150, 150, 0.1)',
+  },
+  settingItemTopBorder: {
     borderTopWidth: 1,
     borderTopColor: 'rgba(150, 150, 150, 0.1)',
   },
