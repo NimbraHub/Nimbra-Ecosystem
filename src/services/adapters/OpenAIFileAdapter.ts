@@ -87,21 +87,15 @@ class OpenAIFileAdapterClass {
     await validateFile(fileUri, filename);
     const { apiKey, baseUrl } = await this.getAuth(provider);
 
-    const base64 = await FileSystem.readAsStringAsync(fileUri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-
     const mimeType = getMimeType(filename);
-    const binaryStr = atob(base64);
-    const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) {
-      bytes[i] = binaryStr.charCodeAt(i);
-    }
-    const blob = new Blob([bytes], { type: mimeType });
 
     const formData = new FormData();
     formData.append('purpose', purpose);
-    formData.append('file', blob, filename);
+    formData.append('file', {
+      uri: fileUri,
+      name: filename,
+      type: mimeType,
+    } as any);
 
     const response = await fetch(`${baseUrl}/files`, {
       method: 'POST',
