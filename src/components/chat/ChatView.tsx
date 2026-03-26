@@ -246,6 +246,7 @@ export default function ChatView({
     
     let fileAttachment: { name: string; type?: string } | null = null;
     let multimodalContent: { type: string; uri?: string; text?: string }[] = [];
+    let generatedImage: { localUri?: string; url?: string; prompt?: string; revisedPrompt?: string } | null = null;
     
     const processContent = (content: string): string => {
       try {
@@ -268,10 +269,28 @@ export default function ChatView({
           }
           return parsedMessage.userPrompt || '';
         }
+
+        if (parsedMessage && parsedMessage.type === 'image_generation') {
+          generatedImage = {
+            localUri: parsedMessage.localUri,
+            url: parsedMessage.url,
+            prompt: parsedMessage.prompt,
+            revisedPrompt: parsedMessage.revisedPrompt,
+          };
+          return parsedMessage.revisedPrompt || parsedMessage.prompt || '';
+        }
         
         if (parsedMessage && 
             parsedMessage.type === 'file_upload' && 
             parsedMessage.internalInstruction) {
+
+          if (parsedMessage.metadata?.openaiFileId) {
+            fileAttachment = {
+              name: parsedMessage.fileName || 'uploaded file',
+              type: parsedMessage.fileName?.split('.').pop()?.toLowerCase() || 'file',
+            };
+            return parsedMessage.userContent || '';
+          }
           
           const match = parsedMessage.internalInstruction.match(/You're reading a file named: (.+?)\n/);
           if (match && match[1]) {
@@ -414,6 +433,28 @@ export default function ChatView({
         </View>
       );
     };
+
+    const renderGeneratedImage = () => {
+      if (!generatedImage) return null;
+      const imageUri = generatedImage.localUri || generatedImage.url;
+      if (!imageUri) return null;
+
+      return (
+        <View style={styles.multimodalWrapper}>
+          <TouchableOpacity
+            style={styles.imageContainer}
+            onPress={() => openImageViewer(imageUri)}
+            activeOpacity={0.8}
+          >
+            <Image
+              source={{ uri: imageUri }}
+              style={styles.messageImage}
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
+        </View>
+      );
+    };
     
     return (
       <View style={styles.messageContainer}>
@@ -461,6 +502,7 @@ export default function ChatView({
         
         {item.role === 'user' && fileAttachment ? renderFileAttachment() : null}
         {item.role === 'user' && multimodalContent.length > 0 ? renderMultimodalContent() : null}
+        {item.role === 'assistant' && generatedImage ? renderGeneratedImage() : null}
 
         <View style={[
           styles.messageCard,
