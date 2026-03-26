@@ -183,7 +183,6 @@ export class OpenAIService {
         'Authorization': `Bearer ${apiKey}`
       };
       
-      
       const response = await fetch(url, {
         method: 'POST',
         headers,
