@@ -34,6 +34,7 @@ import { uuidv4 } from 'react-native-rag';
 import { OnlineModelService } from '../../services/OnlineModelService';
 import { getMimeType, isOpenAIUploadable } from '../../services/adapters/OpenAIFileAdapter';
 import { isClaudeUploadable } from '../../services/adapters/ClaudeFileAdapter';
+import { isGeminiUploadable } from '../../services/adapters/GeminiFileAdapter';
 
 type ChatInputProps = {
   onSend: (text: string) => void;
@@ -273,10 +274,11 @@ export default function ChatInput({
     }
 
     if (baseProvider === 'gemini') {
+      const supported = isImageFile(fileName) || isGeminiUploadable(fileName);
       return {
-        supported: true,
+        supported,
         providerLabel: 'Gemini',
-        allowedTypes: 'provider-dependent MIME types',
+        allowedTypes: 'jpg, jpeg, png, gif, webp, bmp, heic, heif, pdf, txt, md, csv, json, jsonl, html, xml, doc, docx, xls, xlsx, ppt, pptx, mp3, wav, m4a, aac, ogg, mp4, mov, mpeg, mpg, webm',
       };
     }
 
