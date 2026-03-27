@@ -43,8 +43,17 @@ export class ClaudeService {
     this.baseUrlProvider = baseUrlProvider;
   }
 
+  private log(tag: string, data?: Record<string, any>): void {
+    if (data) {
+      console.log(tag, data);
+      return;
+    }
+    console.log(tag);
+  }
+
   private async convertImageToBase64(imageUri: string): Promise<{ data: string; mimeType: string }> {
     try {
+      this.log('claude_img_start', { uri: imageUri });
       const base64String = await FileSystem.readAsStringAsync(imageUri, {
         encoding: FileSystem.EncodingType.Base64,
       });
@@ -65,18 +74,33 @@ export class ClaudeService {
         default:
           mimeType = 'image/jpeg';
       }
+
+      this.log('claude_img_ok', { mimeType, size: base64String.length });
       
       return { data: base64String, mimeType };
     } catch (error) {
+      this.log('claude_img_fail', {
+        msg: error instanceof Error ? error.message : 'unknown',
+      });
       throw new Error('Failed to process image for Claude API');
     }
   }
 
   private async parseMessageContent(message: ChatMessage): Promise<any> {
+    this.log('claude_parse_msg', {
+      role: message.role,
+      hasToolCallId: !!message.toolCallId,
+      contentLen: message.content?.length ?? 0,
+    });
+
     try {
       const parsed = JSON.parse(message.content);
+      this.log('claude_parse_json_ok', { type: parsed?.type || 'none' });
 
       if (parsed.type === 'tool_use_response' && parsed.rawContent) {
+        this.log('claude_parse_tool_use_rsp', {
+          blocks: Array.isArray(parsed.rawContent) ? parsed.rawContent.length : 0,
+        });
         return {
           role: 'assistant',
           content: parsed.rawContent,
@@ -84,6 +108,9 @@ export class ClaudeService {
       }
       
       if (parsed.type === 'multimodal' && parsed.content) {
+        this.log('claude_parse_multimodal', {
+          blocks: Array.isArray(parsed.content) ? parsed.content.length : 0,
+        });
         const content: any[] = [];
         
         for (const item of parsed.content) {
@@ -112,6 +139,7 @@ export class ClaudeService {
       }
       
       if (parsed.type === 'ocr_result') {
+        this.log('claude_parse_ocr');
         const instruction = parsed.internalInstruction || '';
         const userPrompt = parsed.userPrompt || '';
         
@@ -122,6 +150,10 @@ export class ClaudeService {
       }
 
       if (parsed.type === 'file_upload' && parsed.metadata?.claudeFileId) {
+        this.log('claude_parse_file_id', {
+          fileName: parsed.fileName || 'document',
+          fileId: parsed.metadata.claudeFileId,
+        });
         const userContent = parsed.userContent || `Analyze this file: ${parsed.fileName || 'document'}`;
         const filename = parsed.fileName || 'document';
         const isImage = isClaudeImageFile(filename);
@@ -140,13 +172,19 @@ export class ClaudeService {
         const fileName = parsed.fileName || 'document';
         const userContent = parsed.userContent || `Analyze this file: ${fileName}`;
         const ext = fileName.toLowerCase().split('.').pop() || '';
+        this.log('claude_parse_file_uri', {
+          fileName,
+          ext,
+          hasMime: !!parsed.metadata.mimeType,
+        });
 
         if (isClaudeUploadable(fileName)) {
           try {
+            this.log('claude_file_upload_try', { fileName, provider: this.currentProvider });
             const result = await claudeFileAdapter.upload(
               parsed.metadata.remoteFileUri, fileName, this.currentProvider
             );
-            console.log('claude_file_uploaded', fileName, result.id);
+            this.log('claude_file_upload_ok', { fileName, fileId: result.id });
             const isImage = isClaudeImageFile(fileName);
             return {
               role: message.role === 'user' ? 'user' : 'assistant',
@@ -158,17 +196,22 @@ export class ClaudeService {
               ],
             };
           } catch (err) {
-            console.log('claude_file_upload_error', err instanceof Error ? err.message : 'unknown');
+            this.log('claude_file_upload_fail', {
+              fileName,
+              msg: err instanceof Error ? err.message : 'unknown',
+            });
           }
         }
 
         const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
         if (imageExts.includes(ext)) {
           try {
+            this.log('claude_img_fallback_try', { fileName });
             const base64 = await FileSystem.readAsStringAsync(
               parsed.metadata.remoteFileUri,
               { encoding: FileSystem.EncodingType.Base64 }
             );
+            this.log('claude_img_fallback_ok', { fileName, size: base64.length });
             return {
               role: message.role === 'user' ? 'user' : 'assistant',
               content: [
@@ -180,17 +223,23 @@ export class ClaudeService {
               ],
             };
           } catch (err) {
-            console.log('claude_image_fallback_error', err instanceof Error ? err.message : 'unknown');
+            this.log('claude_img_fallback_fail', {
+              fileName,
+              msg: err instanceof Error ? err.message : 'unknown',
+            });
           }
         }
 
         try {
+          this.log('claude_text_fallback_try', { fileName });
           const text = await FileSystem.readAsStringAsync(parsed.metadata.remoteFileUri);
+          this.log('claude_text_fallback_ok', { fileName, size: text.length });
           return {
             role: message.role === 'user' ? 'user' : 'assistant',
             content: `--- ${fileName} ---\n${text}\n---\n\n${userContent}`,
           };
         } catch {
+          this.log('claude_text_fallback_fail', { fileName });
           return {
             role: message.role === 'user' ? 'user' : 'assistant',
             content: userContent,
@@ -198,9 +247,13 @@ export class ClaudeService {
         }
       }
     } catch (error) {
+      this.log('claude_parse_json_fail', {
+        msg: error instanceof Error ? error.message : 'unknown',
+      });
     }
 
     if (message.toolCallId) {
+      this.log('claude_parse_tool_result', { toolCallId: message.toolCallId });
       return {
         role: 'user',
         content: [
@@ -252,14 +305,20 @@ export class ClaudeService {
 
     try {
       this.currentProvider = provider;
+      this.log('claude_gen_start', {
+        provider,
+        msgCount: messages.length,
+        hasTools: !!(options.tools && options.tools.length > 0),
+      });
       const apiKey = await this.apiKeyProvider(provider);
       if (!apiKey) {
+        this.log('claude_key_missing', { provider });
         throw new Error('Claude API key not found. Please set it in Settings.');
       }
 
       const temperature = options.temperature ?? 0.7;
       const maxTokens = options.maxTokens ?? 1024;
-      const topP = options.topP ?? 0.9;
+      const topP = options.topP;
       const model = options.model ?? 'claude-3-7-sonnet-20250219';
 
       let systemMessage: string | undefined;
@@ -276,14 +335,31 @@ export class ClaudeService {
         const formattedMessage = await this.parseMessageContent(msg);
         formattedMessages.push(formattedMessage);
       }
+      this.log('claude_msgs_ready', {
+        total: formattedMessages.length,
+        roles: formattedMessages.map((m: any) => m.role).join(','),
+      });
 
       const requestBody: Record<string, any> = {
         model,
         messages: formattedMessages,
         max_tokens: maxTokens,
         temperature,
-        top_p: topP,
       };
+
+      if (options.temperature == null && typeof topP === 'number') {
+        requestBody.top_p = topP;
+        delete requestBody.temperature;
+      }
+
+      if (options.temperature != null && typeof topP === 'number') {
+        this.log('claude_sampling_conflict', {
+          model,
+          note: 'temperature_prioritized',
+          temperature,
+          topP,
+        });
+      }
 
       if (systemMessage) {
         requestBody.system = systemMessage;
@@ -293,6 +369,7 @@ export class ClaudeService {
         const claudeTools = this.toClaudeTools(options.tools);
         if (claudeTools.length > 0) {
           requestBody.tools = claudeTools;
+          this.log('claude_tools_ready', { count: claudeTools.length });
         }
       }
 
@@ -309,15 +386,26 @@ export class ClaudeService {
       );
       if (hasFileRef) {
         headers['anthropic-beta'] = 'files-api-2025-04-14';
+        this.log('claude_header_beta', { enabled: true });
       }
 
       
   const baseUrl = await this.baseUrlProvider(provider);
+  this.log('claude_req_send', {
+    baseUrl,
+    model,
+    maxTokens,
+    temp: requestBody.temperature ?? null,
+    topP: requestBody.top_p ?? null,
+    tools: requestBody.tools ? requestBody.tools.length : 0,
+    hasSystem: !!requestBody.system,
+  });
   const response = await fetch(`${baseUrl}/messages`, {
         method: 'POST',
         headers,
         body: JSON.stringify(requestBody),
       });
+      this.log('claude_rsp_status', { status: response.status, ok: response.ok });
 
       
       if (!response.ok) {
@@ -325,6 +413,11 @@ export class ClaudeService {
       }
 
       const jsonResponse = await response.json();
+      this.log('claude_rsp_json', {
+        hasContent: !!jsonResponse.content,
+        contentLen: Array.isArray(jsonResponse.content) ? jsonResponse.content.length : 0,
+        stopReason: jsonResponse.stop_reason || 'none',
+      });
       
       if (jsonResponse.content && jsonResponse.content.length > 0) {
         let text = '';
@@ -347,6 +440,7 @@ export class ClaudeService {
         }
 
         if (toolCalls.length > 0) {
+          this.log('claude_tool_calls', { count: toolCalls.length, textLen: text.length });
           return {
             fullResponse: text,
             tokenCount: jsonResponse.usage?.output_tokens || 0,
@@ -358,6 +452,7 @@ export class ClaudeService {
         
         fullResponse = text;
         tokenCount = jsonResponse.usage?.output_tokens || text.split(/\s+/).length;
+        this.log('claude_text_done', { textLen: text.length, tokenCount });
         
         if (onToken) {
           await this.simulateStreaming(text, onToken);
@@ -370,14 +465,23 @@ export class ClaudeService {
         };
       }
       
+      this.log('claude_rsp_empty');
       throw new Error('Failed to extract content from Claude API response');
     } catch (error) {
+      this.log('claude_gen_fail', {
+        provider,
+        msg: error instanceof Error ? error.message : 'unknown',
+      });
       throw error;
     }
   }
 
   private async handleErrorResponse(response: Response): Promise<never> {
     const errorText = await response.text();
+    this.log('claude_rsp_error', {
+      status: response.status,
+      text: errorText.slice(0, 1000),
+    });
     
     if (response.status === 429 || errorText.includes("quota") || errorText.includes("rate_limit")) {
       throw new Error("QUOTA_EXCEEDED: Your Claude API quota has been exceeded. Please try again later or upgrade your API plan.");

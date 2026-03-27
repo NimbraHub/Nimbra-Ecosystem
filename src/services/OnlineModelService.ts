@@ -433,11 +433,18 @@ export class OnlineModelService {
   ): Promise<string> {
     const claudeService = this._claudeServiceGetter();
     if (!claudeService) {
+      console.log('online_claude_service_missing', { provider });
       throw new Error('ClaudeService not initialized');
     }
     
     const configuredModel = await this.getModelName(provider);
     const modelToUse = configuredModel || this.getDefaultModelName(provider);
+    console.log('online_claude_send', {
+      provider,
+      model: options.model || modelToUse,
+      msgCount: messages.length,
+      stream: options.stream === true,
+    });
     
     const claudeOptions = {
       ...options,
@@ -454,6 +461,7 @@ export class OnlineModelService {
       streamEnabled ? onToken : undefined,
       provider
     );
+    console.log('online_claude_done', { provider, textLen: fullResponse.length });
     
     return fullResponse;
   }
@@ -513,13 +521,20 @@ export class OnlineModelService {
   ): Promise<ClaudeResponse> {
     const claudeService = this._claudeServiceGetter();
     if (!claudeService) {
+      console.log('online_claude_tools_service_missing', { provider });
       throw new Error('ClaudeService not initialized');
     }
 
     const configuredModel = await this.getModelName(provider);
     const modelToUse = configuredModel || this.getDefaultModelName(provider);
+    console.log('online_claude_tools_send', {
+      provider,
+      model: options.model || modelToUse,
+      msgCount: messages.length,
+      toolCount: tools.length,
+    });
 
-    return claudeService.generateResponse(
+    const result = await claudeService.generateResponse(
       messages,
       {
         ...options,
@@ -529,6 +544,12 @@ export class OnlineModelService {
       onToken,
       provider
     );
+    console.log('online_claude_tools_done', {
+      provider,
+      textLen: result.fullResponse.length,
+      toolCalls: result.toolCalls ? result.toolCalls.length : 0,
+    });
+    return result;
   }
 
   async generateImage(

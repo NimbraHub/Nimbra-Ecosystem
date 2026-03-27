@@ -341,6 +341,7 @@ export class MessageProcessingService {
 
     const isOpenAI = OnlineModelService.getBaseProvider(activeProvider) === 'chatgpt';
     const isClaude = OnlineModelService.getBaseProvider(activeProvider) === 'claude';
+    console.log('msgproc_provider', { activeProvider, isOpenAI, isClaude });
 
     /*
       Image generation: detect explicit image generation requests for OpenAI.
@@ -385,6 +386,7 @@ export class MessageProcessingService {
         and handle the tool call response loop (max 5 iterations).
       */
       if (isOpenAI && toolRegistry.hasTools()) {
+        console.log('msgproc_openai_tools_start', { toolCount: toolRegistry.getAllTools().length });
         let iteration = 0;
         let loopMessages = [...messageParams];
         const tools = toolRegistry.getAllTools();
@@ -392,6 +394,7 @@ export class MessageProcessingService {
         while (!toolExecutor.hasReachedLimit(iteration)) {
           if (this.cancelGenerationRef.current) break;
           iteration++;
+          console.log('msgproc_openai_iter', { iteration, msgCount: loopMessages.length });
 
           const response = await onlineModelService.sendOpenAIWithTools(
             loopMessages,
@@ -403,6 +406,7 @@ export class MessageProcessingService {
 
           if (response.toolCalls && response.toolCalls.length > 0) {
             this.callbacks.setStreamingMessage('Using tools...');
+            console.log('msgproc_openai_tool_calls', { count: response.toolCalls.length });
 
             loopMessages.push({
               id: generateRandomId(),
@@ -411,6 +415,7 @@ export class MessageProcessingService {
             });
 
             const results = await toolExecutor.executeAll(response.toolCalls);
+            console.log('msgproc_openai_tool_results', { count: results.length });
             for (const result of results) {
               loopMessages.push({
                 id: generateRandomId(),
@@ -423,6 +428,7 @@ export class MessageProcessingService {
               tc => toolRegistry.isBuiltin(tc.function.name)
             );
             if (hasOnlyBuiltins) {
+              console.log('msgproc_openai_builtin_only');
               break;
             }
             continue;
@@ -430,10 +436,12 @@ export class MessageProcessingService {
 
           fullResponse = response.fullResponse;
           tokenCount = response.tokenCount;
+          console.log('msgproc_openai_done', { tokenCount, textLen: fullResponse.length });
           legacyStreamCallback(fullResponse);
           break;
         }
       } else if (isClaude && toolRegistry.hasTools()) {
+        console.log('msgproc_claude_tools_start', { toolCount: toolRegistry.getAllTools().length });
         let iteration = 0;
         let loopMessages: any[] = [...messageParams];
         const tools = toolRegistry.getAllTools();
@@ -441,6 +449,7 @@ export class MessageProcessingService {
         while (!toolExecutor.hasReachedLimit(iteration)) {
           if (this.cancelGenerationRef.current) break;
           iteration++;
+          console.log('msgproc_claude_iter', { iteration, msgCount: loopMessages.length });
 
           const response = await onlineModelService.sendClaudeWithTools(
             loopMessages,
@@ -452,14 +461,20 @@ export class MessageProcessingService {
 
           if (response.toolCalls && response.toolCalls.length > 0) {
             this.callbacks.setStreamingMessage('Using tools...');
+            console.log('msgproc_claude_tool_calls', {
+              count: response.toolCalls.length,
+              rawBlocks: response.rawContent ? response.rawContent.length : 0,
+            });
 
             loopMessages.push({
               id: generateRandomId(),
               role: 'assistant' as const,
               content: JSON.stringify({ type: 'tool_use_response', rawContent: response.rawContent }),
             });
+            console.log('msgproc_claude_push_assistant', { msgCount: loopMessages.length });
 
             const results = await toolExecutor.executeAll(response.toolCalls);
+            console.log('msgproc_claude_tool_results', { count: results.length });
             for (const result of results) {
               loopMessages.push({
                 id: generateRandomId(),
@@ -468,11 +483,13 @@ export class MessageProcessingService {
                 toolCallId: result.toolCallId,
               });
             }
+            console.log('msgproc_claude_push_results', { msgCount: loopMessages.length });
 
             const hasOnlyBuiltins = response.toolCalls.every(
               tc => toolRegistry.isBuiltin(tc.function.name)
             );
             if (hasOnlyBuiltins) {
+              console.log('msgproc_claude_builtin_only');
               break;
             }
             continue;
@@ -480,10 +497,12 @@ export class MessageProcessingService {
 
           fullResponse = response.fullResponse;
           tokenCount = response.tokenCount;
+          console.log('msgproc_claude_done', { tokenCount, textLen: fullResponse.length });
           legacyStreamCallback(fullResponse);
           break;
         }
       } else {
+        console.log('msgproc_send_plain', { provider: activeProvider, msgCount: messageParams.length });
         await onlineModelService.sendMessage(activeProvider, messageParams, apiParams, legacyStreamCallback);
       }
     } catch (error) {
