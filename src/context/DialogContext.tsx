@@ -85,10 +85,13 @@ export const DialogProvider = ({ children }: DialogProviderProps) => {
   };
 
   const handleConfirm = () => {
-    if (confirmCallback) {
-      confirmCallback();
-    }
+    const callback = confirmCallback;
     hideDialog();
+    if (callback) {
+      setTimeout(() => {
+        callback();
+      }, 0);
+    }
   };
 
   const handleCancel = () => {
