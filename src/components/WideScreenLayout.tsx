@@ -37,7 +37,7 @@ export default function WideScreenLayout({}: WideScreenLayoutProps) {
   const targetScreen = routeParams?.screen;
   const modelRoute = targetScreen === 'ModelTab' ? { params: routeParams?.params } : undefined;
 
-  const [sidebarWidth, setSidebarWidth] = useState(screenWidth * 0.3);
+  const [sidebarWidth, setSidebarWidth] = useState(screenWidth * 0.45);
   const [isDragging, setIsDragging] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const translateX = useRef(new Animated.Value(0)).current;
