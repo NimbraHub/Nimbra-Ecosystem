@@ -87,9 +87,6 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   const [modelSettings, setModelSettings] = useState<StoredModelSettings>(
     llamaManager.getSettings()
   );
-  const [noExtraBuffers, setNoExtraBuffers] = useState<boolean>(
-    llamaManager.getNoExtraBuffers()
-  );
   const [error, setError] = useState<string | null>(null);
   const [activeInferenceEngine, setActiveInferenceEngine] =
     useState<InferenceEngine>('llama');
@@ -760,11 +757,6 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
           gpuConfig={gpuConfig}
           onToggleGpu={handleGpuToggle}
           onGpuLayersChange={handleGpuLayersChange}
-          noExtraBuffers={noExtraBuffers}
-          onToggleNoExtraBuffers={async (enabled) => {
-            setNoExtraBuffers(enabled);
-            await llamaManager.setNoExtraBuffers(enabled);
-          }}
           showAppleFoundationToggle={isAppleDevice}
           appleFoundationEnabled={appleFoundationEnabled}
           onToggleAppleFoundation={handleAppleFoundationToggle}
