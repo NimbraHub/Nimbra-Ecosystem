@@ -65,12 +65,6 @@ async function remindLater(updateId: string): Promise<void> {
   );
 }
 
-/*
-  Validates update manifest origin to prevent tampered/rogue updates:
-  - projectId must match our known project
-  - runtimeVersion must match current build 
-  - owner slug must match to prevent impersonation
-*/
 function verifyManifest(manifest: any): boolean {
   const extra = manifest?.extra;
   const expoClient = extra?.expoClient;
