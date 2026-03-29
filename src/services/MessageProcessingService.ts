@@ -147,18 +147,22 @@ export class MessageProcessingService {
         );
       }
       
-      this.callbacks.setIsStreaming(false);
-      this.callbacks.setStreamingMessageId(null);
-      this.callbacks.setStreamingThinking('');
-      this.callbacks.setStreamingStats(null);
-      this.callbacks.setIsRegenerating(false);
+      if (!this.cancelGenerationRef.current) {
+        this.callbacks.setIsStreaming(false);
+        this.callbacks.setStreamingMessageId(null);
+        this.callbacks.setStreamingThinking('');
+        this.callbacks.setStreamingStats(null);
+        this.callbacks.setIsRegenerating(false);
+      }
       
     } catch (error) {
-      this.callbacks.setIsStreaming(false);
-      this.callbacks.setStreamingMessageId(null);
-      this.callbacks.setStreamingThinking('');
-      this.callbacks.setStreamingStats(null);
-      this.callbacks.setIsRegenerating(false);
+      if (!this.cancelGenerationRef.current) {
+        this.callbacks.setIsStreaming(false);
+        this.callbacks.setStreamingMessageId(null);
+        this.callbacks.setStreamingThinking('');
+        this.callbacks.setStreamingStats(null);
+        this.callbacks.setIsRegenerating(false);
+      }
       throw error;
     }
   }
