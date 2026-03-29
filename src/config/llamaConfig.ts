@@ -15,7 +15,7 @@ export const DEFAULT_SETTINGS: ModelSettings = {
   penaltyRepeat: 1.0,
   penaltyFreq: 0.0,
   penaltyPresent: 0.0,
-  mirostat: 2,
+  mirostat: 0,
   mirostatTau: 5.0,
   mirostatEta: 0.1,
   dryMultiplier: 0.0,
