@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, AppState, AppStateStatus, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, AppState, AppStateStatus, ActivityIndicator, Linking } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { theme } from '../constants/theme';
 import AppHeader from '../components/AppHeader';
@@ -18,6 +18,12 @@ import * as WebBrowser from 'expo-web-browser';
 type ProfileScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
 };
+
+const IN_APP_BROWSER_URLS = new Set([
+  'https://inferrlm.app/delete-account',
+]);
+
+const normalizeLink = (url: string) => url.replace(/\/+$/, '');
 
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const { theme: currentTheme } = useTheme();
@@ -38,7 +44,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
   const verificationCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
-  
+
   useEffect(() => {
     WebBrowser.warmUpAsync();
     return () => {
@@ -340,28 +346,24 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    showDialog({
-      title: 'Delete Account',
-      message: 'Go to our page to request account deletion?',
-      confirmText: 'Continue',
-      cancelText: 'Cancel',
-      onConfirm: async () => {
-        try {
-          const url = 'https://inferrlm.app/delete-account';
-          await WebBrowser.openBrowserAsync(url, {
-            presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-            controlsColor: themeColors.primary,
-            toolbarColor: themeColors.background,
-          });
-        } catch (error) {
-          showDialog({
-            title: 'Error',
-            message: 'Failed to open browser'
-          });
-        }
+  const openLink = async (url: string) => {
+    try {
+      const normalizedUrl = normalizeLink(url);
+      if (IN_APP_BROWSER_URLS.has(normalizedUrl)) {
+        await WebBrowser.openBrowserAsync(normalizedUrl);
+        return;
       }
-    });
+      await Linking.openURL(normalizedUrl);
+    } catch (error) {
+      showDialog({
+        title: 'Error',
+        message: 'Failed to open browser'
+      });
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    openLink('https://inferrlm.app/delete-account');
   };
 
   const handleSignOut = async () => {

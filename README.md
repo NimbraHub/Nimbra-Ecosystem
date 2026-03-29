@@ -21,44 +21,51 @@ If you want to support me and the development of this project, you can donate to
 ## Features
 
 ### Core Inference
-- Local inference through llama.cpp with support for GGUF models on both Android and iOS.
-- Apple Silicon MLX inference (iOS only).
+- Core local inference through llama.cpp with support for GGUF models on both Android and iOS.
+- Local MLX inference for Apple Silicon devices.
 - Seamless integration with cloud-based models from OpenAI, Gemini, and Anthropic. You need your own API keys and an InferrLM registered account for remote models. Using remote models is optional.
-- Customizable base URLs for OpenAI-compatible providers like OpenRouter, Groq, Ollama, LM Studio, Together AI. This allows you to access alternative API endpoints.
-- Apple Foundation model support (iOS only) for Apple Intelligence supported devices.
+- Customizable base URLs for OpenAI-compatible providers like OpenRouter, Groq, Ollama, LM Studio, Together AI. This allows you to access alternative API endpoints within the app.
+- Apple Foundation model support for Apple Intelligence supported devices.
 
 ### Vision and Multimodal
-- Vision support through multimodal models with their corresponding projector (mmproj) files which you can read more about [here](https://github.com/ggml-org/llama.cpp/blob/master/docs/multimodal.md).
-- Built-in camera (based on expo-camera) lets you capture pictures directly in the app and send them to models. Clicked pictures are saved to your gallery by default.
+- Vision support through multimodal models with their corresponding projector (mmproj) files. You can read more about them [here](https://github.com/ggml-org/llama.cpp/blob/master/docs/multimodal.md).
+- Built-in camera lets you capture pictures directly within the app and send them to models.
 
 ### Document Processing and RAG
 - RAG (Retrieval-Augmented Generation) support for enhanced document understanding and context-aware responses.
-- File attachment support with a built-in document extractor that performs OCR locally on all pages of your documents and extracts text content to send to models (local or remote).
+- File attachment support with a built-in document extractor that performs OCR locally on all pages of your documents and extracts text content to send to the local models.
 - Document ingestion system that processes and indexes your files for efficient retrieval during conversations.
+- Native file upload support for the remote models.
 
 ### Local Server
-- Built-in HTTP server that exposes REST APIs for accessing your models from any device on your WiFi network.
-- Server can be started from the Server tab with configuration options for network access and auto-start.
-- Share your InferrLM chat interface with computers, tablets, or other devices through a simple URL or QR code.
-- Full API documentation is available [HERE](docs/REST_APIs.md) and at the server homepage when running.
-- A command-line interface tool is available at [github.com/sbhjt-gr/InferrLM-CLI](https://github.com/sbhjt-gr/InferrLM-CLI) that demonstrates how to build applications using these REST APIs.
+- Built-in HTTP server that exposes REST APIs for accessing your models from any device on your local network. The server can be started from the Server tab. Share your InferrLM chat interface with computers, tablets, or other devices through a URL.
+- Full API documentation is available [HERE](docs/REST_APIs.md) and at the server homepage.
+- A command-line interface tool is available at [github.com/sbhjt-gr/InferrLM-CLI](https://github.com/sbhjt-gr/InferrLM-CLI) that demonstrates how to build applications using its API.
 
 ### Model Management
-- Download manager that fetches models directly from HuggingFace. Cherry-picked model list optimized for running on edge devices available in Models -> Download Models tab.
-- Downloaded models appear in the chat screen model selector and the "Stored Models" tab under the "Models" section.
-- Import models from local storage or download from custom URLs.
-- Model operations including load, unload, reload, and refresh through the app or REST API.
+- Download manager that fetches models directly from HuggingFace. Cherry-picked model list optimized for running on edge devices is available in Models -> "Download Models" tab.
+- Downloaded models appear in the chat screen model selector and in the "Stored Models" tab inside the "Models" tab.
+- Import models from local storage or download directly from URLs.
 
 ### Chat Experience
 - Messages support editing, regeneration, copy functionality and markdown rendering.
-- Fast native markdown rendering with math and LaTeX support powered by `react-native-nitro-markdown`, a C++ based renderer built on the Nitro Modules bridge.
+- Fast native markdown rendering with math rendering support powered by `react-native-nitro-markdown`, a C++ based renderer built on the Nitro Modules bridge.
 - Dedicated branching support on each chat bubble lets you fork the conversation from any message, preserving the original thread so you can explore alternate directions without losing prior context.
-- Code generated by models is rendered in codeblocks with clipboard copying functionality.
-- Chat history management with the ability to create, save, and organize conversations.
-- Real-time streaming responses for both local and remote models.
+- Code generated by the models is rendered inside codeblocks with clipboard functionality.
+- Chat history management with the ability to pin conversations.
+
+## Tech Stack
+
+- **Framework**: React Native 0.81 with Expo 54 (New Architecture)
+- **App language**: TypeScript, JavaScript
+- **iOS native modules**: Swift
+- **Android native modules**: Kotlin
+- **Inference engine**: C, C++
+- **Navigation**: React Navigation
+- **Database**: OP-SQLite, Expo SQLite
 
 ## Getting Started
-If you want to contribute or just try to run it locally, follow the guide below. Please adhere to the rules of the <a href="https://github.com/sbhjt-gr/InferrLM/blob/main/LICENSE">LICENSE</a> because you are not supposed to just `git clone` and pass it as your own work.
+If you want to contribute or just try to run it locally, follow the guide below. Your work/modifications should adhere to our <a href="https://github.com/sbhjt-gr/InferrLM/blob/main/LICENSE">LICENSE</a>.
 
 ### Prerequisites
 
@@ -82,7 +89,7 @@ If you want to contribute or just try to run it locally, follow the guide below.
    ```
 
 3. **Set up environment variables**
-   Configure your API keys and Firebase settings as shown in app.config.json
+   Configure your API keys and Firebase settings. The list of variables is available in the [app.config.json](app.config.js)
 
 4. **Run on device or emulator**
    ```bash
@@ -93,17 +100,9 @@ If you want to contribute or just try to run it locally, follow the guide below.
    npx expo run:ios
    ```
 
-## Command Line Interface
-
-The InferrLM-CLI tool is a terminal-based client that connects to your InferrLM server and provides an interactive chat interface directly from your command line. This serves as both a functional tool and a reference implementation for developers who want to build applications using the InferrLM REST APIs.
-
-The CLI is built with React and Ink to provide a modern terminal UI with features like streaming responses, conversation history, and an interactive setup flow. You can find the complete source code and installation instructions at [github.com/sbhjt-gr/InferrLM-CLI](https://github.com/sbhjt-gr/InferrLM-CLI).
-
-To get started with the CLI, make sure your InferrLM server is running on your mobile device, then install the CLI tool and follow the setup instructions in its repository.
-
 ## REST API
 
-InferrLM includes a built-in HTTP server that exposes REST APIs for accessing your local models from any device on your WiFi network. This allows you to integrate InferrLM with other applications, scripts, or services.
+InferrLM includes a built-in HTTP server that exposes the models using the OpenAI API for accessing your local models from any device on your local network. This allows you to integrate InferrLM with other applications, scripts, or services.
 
 ### Starting the Server
 
@@ -111,6 +110,15 @@ InferrLM includes a built-in HTTP server that exposes REST APIs for accessing yo
 2. Navigate to the Server tab
 3. Toggle the server switch to start it
 4. The server URL will be displayed (typically `http://YOUR_DEVICE_IP:8889`)
+
+## Command Line Interface
+
+The InferrLM-CLI tool is a terminal-based client that connects to your InferrLM server and provides an interactive chat interface directly from your command line. This serves as both a functional tool and a reference implementation for developers who want to build applications using the InferrLM REST API.
+
+The CLI is built with React and Ink to provide a basic terminal UI with features like streaming responses, conversation history, and an interactive setup flow. You can find the complete source code and installation instructions at [github.com/sbhjt-gr/InferrLM-CLI](https://github.com/sbhjt-gr/InferrLM-CLI).
+
+To get started with the CLI, make sure your InferrLM server is running on your mobile device, then install the CLI tool and follow the setup instructions provided in its repository.
+
 
 ### API Documentation
 
@@ -123,51 +131,25 @@ Once the server is running, you can access the complete API documentation by ope
 
 For detailed API reference, see the [REST API Documentation](docs/REST_APIs.md).
 
-### Example Usage
-
-```bash
-# Chat with a model
-curl -X POST http://YOUR_DEVICE_IP:8889/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "llama-3.2-1b",
-    "messages": [{"role": "user", "content": "Hello!"}],
-    "stream": false
-  }'
-
-# List available models
-curl http://YOUR_DEVICE_IP:8889/api/tags
-
-# Ingest a document for RAG
-curl -X POST http://YOUR_DEVICE_IP:8889/api/files/ingest \
-  -H "Content-Type: application/json" \
-  -d '{"content": "Your document content here"}'
-```
-
 ## License
 
 This project is distributed under the AGPL-3.0 License. Please read it [here](https://github.com/sbhjt-gr/InferrLM/blob/main/LICENSE). Any modifications must adhere to the rules of this LICENSE.
 
 ## Contributing
 
-Contributions are welcome! Before starting work:
-
-1. Find an issue in the [issues](https://github.com/sbhjt-gr/InferrLM/issues) tab or create a new one
-2. Comment on the issue to express your interest
-3. Wait to be assigned before starting work
-
-When proposing new features, clearly explain what it is, why it's useful, and how you plan to implement it.
+Contributions are welcome! You can find issues in the [issues](https://github.com/sbhjt-gr/InferrLM/issues) tab or raise new ones and start your work.
 
 Read our [Contributing Guide](docs/CONTRIBUTING.md) for detailed contribution guidelines, code standards, and best practices. 
 
 ## Acknowledgments
 
 - [llama.cpp](https://github.com/ggerganov/llama.cpp) - The underlying engine for running local GGUF models on both Android and iOS.
+- [mlx-swift-lm](https://github.com/ml-explore/mlx-swift-lm) - Swift library for running MLX language models on Apple Silicon, powering the MLX inference backend on iOS.
 - [inferrlm-llama.rn](https://github.com/sbhjt-gr/inferra-llama.rn) - The customized React Native adapter which provides the bridge for llama.cpp. Originally forked and self-hosted from [llama.rn](https://github.com/mybigday/llama.rn) for updating llama.cpp more frequently.
 - [@inferrlm/react-native-mlx](https://github.com/sbhjt-gr/react-native-nitro-mlx) - Apple Silicon MLX inference engine for iOS, providing optimized on-device performance via the Nitro Modules bridge forked and maintained from [react-native-nitro-mlx](https://github.com/corasan/react-native-nitro-mlx)
-- [react-native-nitro-markdown](https://github.com/sbhjt-gr/react-native-nitro-markdown) - Native C++ markdown renderer for React Native, used for chat message rendering.
+- [react-native-nitro-markdown](https://github.com/sbhjt-gr/react-native-nitro-markdown) - Native C++ markdown renderer for React Native, used for fast chat message rendering.
 - [react-native-rag](https://github.com/software-mansion-labs/react-native-rag) + [@langchain/textsplitters](https://github.com/langchain-ai/langchainjs) - RAG implementation for React Native that powers the document retrieval and ingestion features using LangChain.
-- [react-native-ai](https://github.com/callstackincubator/ai) - Adaptor that provides Apple Foundation bridge from Swift to JavaScript.
+- [react-native-ai](https://github.com/callstackincubator/ai) - The adaptor that provides access to the Apple Foundation model with its Swift API.
 - If someone thinks they also need to be mentioned here, please let me know.
 
 ## Star History

@@ -10,9 +10,7 @@ Contributions are welcome! You can find reported bugs and feature requests in th
 
 **Before starting work:**
 1. Browse the issues tab to find something you want to work on
-2. Comment on the issue expressing your interest in working on it
-3. Wait to be assigned to the task before you start working
-4. This helps avoid duplicate work and ensures coordination
+2. Comment on the issue expressing your interest and start working on it
 
 ### Proposing New Features
 
@@ -22,7 +20,7 @@ If you want to contribute a feature of your own, open a new issue first and desc
 - **Why it's useful**: The problem it solves or the value it adds to users
 - **How you plan to implement it**: Your technical approach and any dependencies or changes required
 
-After discussion and approval, you will be assigned to the issue and can start working on it.
+After a discussion, you will be assigned to it and can start working on it.
 
 ## Code Guidelines
 
@@ -41,9 +39,6 @@ console.log('Model loaded successfully');
 // Good
 console.log('model_load_success');
 ```
-
-#### Clean Up Debug Logs
-Remove all debug logs and console statements before submitting your pull request.
 
 #### Meaningful Comments
 Comments should explain why the code is implemented in a particular way, not what it does. The code itself should be clear enough to understand what it does.
@@ -102,27 +97,6 @@ useEffect(() => {
 Keep components focused and under 1000 lines when possible. Break large components into smaller, reusable pieces.
 
 ### TypeScript Guidelines
-
-#### Use Strict Types
-Always use proper TypeScript types. Avoid `any` unless absolutely necessary.
-
-```typescript
-// Bad
-function processMessage(message: any) {
-  return message.content;
-}
-
-// Good
-interface Message {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp: Date;
-}
-
-function processMessage(message: Message): string {
-  return message.content;
-}
-```
 
 ### File Naming and Organization
 
@@ -188,13 +162,6 @@ function handleStreamError(error: Error) {
 This attribution is in addition to Git commit history and helps identify contributions at the code level.
 
 ## Git Workflow
-
-### Branch Naming
-Use descriptive branch names that indicate the type of change:
-- `feature/add-rag-support`
-- `fix/model-loading-crash`
-- `docs/update-api-reference`
-- `refactor/extract-chat-handlers`
 
 ### Commit Messages
 Write clear, concise commit messages following this format:

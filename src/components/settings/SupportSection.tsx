@@ -50,7 +50,7 @@ const SupportSection = ({ onOpenLink, onNavigateToLicenses, onNavigateToContentT
 
       <TouchableOpacity 
         style={[styles.settingItem, styles.settingItemBorder]}
-        onPress={() => onOpenLink('https://github.com/sbhjt-gr/inferra')}
+        onPress={() => onOpenLink('https://github.com/sbhjt-gr/InferrLM')}
       >
         <View style={styles.settingLeft}>
           <View style={[styles.iconContainer, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}>
@@ -70,7 +70,7 @@ const SupportSection = ({ onOpenLink, onNavigateToLicenses, onNavigateToContentT
 
       <TouchableOpacity 
         style={[styles.settingItem, styles.settingItemBorder]}
-        onPress={() => onOpenLink('https://github.com/sbhjt-gr/inferra/issues')}
+        onPress={() => onOpenLink('https://github.com/sbhjt-gr/InferrLM/issues')}
       >
         <View style={styles.settingLeft}>
           <View style={[styles.iconContainer, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}>

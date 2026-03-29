@@ -9,7 +9,7 @@ export default {
     orientation: "default",
     icon: "./assets/icon.png",
     userInterfaceStyle: "automatic",
-    description: "AI-powered mobile chat assistant supporting both local and cloud-based language models. Features include AI text generation, image analysis, document processing, and multimodal interactions. All AI-generated content is clearly labeled for transparency.",
+    description: "AI-powered mobile chat assistant supporting both local and cloud-based language models. Features include AI text generation, image analysis, document processing, and multimodal interactions.",
     privacy: "public",
     keywords: ["AI", "chat", "assistant", "machine learning", "language model", "artificial intelligence"],
     newArchEnabled: true,
@@ -32,7 +32,7 @@ export default {
       supportsTablet: true,
       requireFullScreen: false,
       bundleIdentifier: APP_ENV === 'development' ? "com.gorai.inferra.dev" : "com.gorai.inferra",
-      buildNumber: "290",
+      buildNumber: "291",
       runtimeVersion: "0.8.6",
       infoPlist: {
         UIBackgroundModes: [
@@ -62,7 +62,7 @@ export default {
       scheme: APP_ENV === 'development' ? "com.gorai.inferra.dev" : "com.gorai.inferra"
     },
     android: {
-      versionCode: 290,
+      versionCode: 291,
       predictiveBackGestureEnabled: false,
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
@@ -106,7 +106,7 @@ export default {
       ]
     },
     extra: {
-      autoUpdate: false,
+      autoUpdate: true,
       changelog: [
         "Updated server homepage documentation",
       ],

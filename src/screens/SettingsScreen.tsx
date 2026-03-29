@@ -65,8 +65,8 @@ type DialogSettingConfig = {
 
 const IN_APP_BROWSER_URLS = new Set([
   'https://inferrlm.app/privacy-policy',
-  'https://github.com/sbhjt-gr/inferra',
-  'https://github.com/sbhjt-gr/inferra/issues',
+  'https://github.com/sbhjt-gr/InferrLM',
+  'https://github.com/sbhjt-gr/InferrLM/issues',
 ]);
 
 const normalizeLink = (url: string) => url.replace(/\/+$/, '');

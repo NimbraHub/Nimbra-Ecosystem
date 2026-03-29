@@ -39,7 +39,7 @@
         "APP_ENV": "production"
       },
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "apk"
       },
       "ios": {
         "autoIncrement": false,
