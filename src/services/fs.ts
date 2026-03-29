@@ -37,6 +37,7 @@ const EncodingType = {
 type EncodingTypeValue = (typeof EncodingType)[keyof typeof EncodingType];
 
 const withSlash = (path: string): string => (path.endsWith('/') ? path : `${path}/`);
+const isContentUri = (path: string): boolean => path.startsWith('content://');
 
 const pathInfo = (path: string): { exists: boolean; isDirectory: boolean | null } => {
   try {
@@ -147,6 +148,25 @@ export const fs = {
   EncodingType,
 
   async getInfoAsync(path: string, options?: InfoOptions): Promise<InfoResult> {
+    if (isContentUri(path)) {
+      try {
+        const info = new File(path).info();
+        return {
+          exists: info.exists,
+          isDirectory: false,
+          size: options?.size ? info.size ?? 0 : undefined,
+          modificationTime: info.modificationTime ?? undefined,
+          uri: info.uri ?? path,
+        };
+      } catch {
+        return {
+          exists: false,
+          isDirectory: false,
+          uri: path,
+        };
+      }
+    }
+
     const type = detectPathType(path);
     if (type === 'missing') {
       return {
@@ -199,6 +219,11 @@ export const fs = {
   },
 
   async copyAsync(options: CopyMoveOptions): Promise<void> {
+    if (isContentUri(options.from) || isContentUri(options.to)) {
+      new File(options.from).copy(new File(options.to));
+      return;
+    }
+
     copyPath(options);
   },
 

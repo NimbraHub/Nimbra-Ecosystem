@@ -62,6 +62,14 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
     const msg = (error as { message?: string } | undefined)?.message ?? String(error ?? '');
     return msg.toLowerCase().includes(SHARE_CANCELLED_ERROR);
   };
+
+  const isDuplicateModelError = (error: unknown): boolean => {
+    const msg = (error as { message?: string } | undefined)?.message ?? String(error ?? '');
+    const lower = msg.toLowerCase();
+    return lower.includes('already exists') || lower.includes('model with this name');
+  };
+
+  const normalizeModelName = (name: string): string => name.trim().toLowerCase();
   
   const buttonScale = useRef(new Animated.Value(1)).current;
   const prevActiveCount = useRef(0);
@@ -160,6 +168,14 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
         return;
       }
 
+      const existingModels = await modelDownloader.getStoredModels();
+      const pickedName = normalizeModelName(file.name);
+      const duplicate = existingModels.some(model => normalizeModelName(model.name) === pickedName);
+      if (duplicate) {
+        showDialog('Model Already Exists', `${file.name} is already imported.`);
+        return;
+      }
+
       setIsLoading(true);
       setImportingModelName(file.name);
       
@@ -173,6 +189,10 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
       } catch (error) {
         setIsLoading(false);
         setImportingModelName(null);
+        if (isDuplicateModelError(error)) {
+          showDialog('Model Already Exists', `${file.name} is already imported.`);
+          return;
+        }
         showDialog('Error', 'Failed to import the model. Please try again.');
       }
     } catch (error) {
