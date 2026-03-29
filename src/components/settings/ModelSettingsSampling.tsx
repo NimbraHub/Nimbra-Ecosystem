@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Switch, Platform } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Switch } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
@@ -140,7 +140,7 @@ const ModelSettingsSampling = ({
               <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
                 {gpuConfig.description}
               </Text>
-              {Platform.OS === 'ios' && (
+              {showMlxWarning && (
                 <Text style={styles.unsupportedText}>Unsupported on MLX</Text>
               )}
               {!gpuConfig.supported && gpuConfig.reason && (
