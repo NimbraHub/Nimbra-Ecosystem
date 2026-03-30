@@ -5,7 +5,7 @@ export default {
     name: "InferrLM",
     slug: "inferrlm",
     owner: "subhajitgorai",
-    version: "0.8.6",
+    version: "0.8.7",
     orientation: "default",
     icon: "./assets/icon.png",
     userInterfaceStyle: "automatic",
@@ -17,13 +17,6 @@ export default {
       enabled: true,
       checkAutomatically: 'NEVER',
       url: "https://u.expo.dev/a539a082-58a3-4f29-9bb7-107913124e7d",
-      ...(APP_ENV === 'production' || APP_ENV === 'preview' ? {
-        codeSigningCertificate: "./keys/certificate.pem",
-        codeSigningMetadata: {
-          keyid: "main",
-          alg: "rsa-v1_5-sha256",
-        },
-      } : {}),
     },
     assetBundlePatterns: [
       "**/*"
@@ -32,8 +25,8 @@ export default {
       supportsTablet: true,
       requireFullScreen: false,
       bundleIdentifier: APP_ENV === 'development' ? "com.gorai.inferra.dev" : "com.gorai.inferra",
-      buildNumber: "291",
-      runtimeVersion: "0.8.6",
+      buildNumber: "293",
+      runtimeVersion: "0.8.7",
       infoPlist: {
         UIBackgroundModes: [
           "fetch",
@@ -62,14 +55,14 @@ export default {
       scheme: APP_ENV === 'development' ? "com.gorai.inferra.dev" : "com.gorai.inferra"
     },
     android: {
-      versionCode: 291,
+      versionCode: 293,
       predictiveBackGestureEnabled: false,
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#660880"
       },
       package: "com.gorai.ragionare",
-      runtimeVersion: "0.8.6",
+      runtimeVersion: "0.8.7",
       googleServicesFile: "./google-services.json",
       edgeToEdgeEnabled: true,
       resizeableActivity: true,
@@ -108,7 +101,7 @@ export default {
     extra: {
       autoUpdate: true,
       changelog: [
-        "Updated server homepage documentation",
+        "Resolved critical crashes & bugfixes.",
       ],
       GEMINI_API_KEY: process.env.GEMINI_API_KEY,
       OPENAI_API_KEY: process.env.OPENAI_API_KEY,

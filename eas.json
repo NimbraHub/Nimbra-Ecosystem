@@ -25,7 +25,7 @@
         "APP_ENV": "preview"
       },
       "android": {
-        "buildType": "apk"
+        "buildType": "app-bundle"
       },
       "ios": {
         "buildConfiguration": "Release",
@@ -44,6 +44,18 @@
       "ios": {
         "autoIncrement": false,
         "image": "macos-sequoia-15.6-xcode-26.0"
+      }
+    },
+    "production-apk": {
+      "extends": "production",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production-aab": {
+      "extends": "production",
+      "android": {
+        "buildType": "app-bundle"
       }
     },
     "production-simulator": {

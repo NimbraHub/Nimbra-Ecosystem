@@ -83,7 +83,7 @@ const InferenceEngineSection: React.FC<InferenceEngineProps> = ({
             {engine.description}
           </Text>
           {engine.requiresMLX && !supportsMLX && (
-            <Text style={[styles.requirementText, { color: currentTheme === 'dark' ? '#FF9494' : '#d32f2f' }]}>Requires iOS 16+</Text>
+            <Text style={[styles.requirementText, { color: currentTheme === 'dark' ? '#FF9494' : '#d32f2f' }]}>Requires iOS 26+</Text>
           )}
         </View>
         <Switch

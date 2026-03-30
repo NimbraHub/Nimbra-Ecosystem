@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Animated, AppState, AppStateStatus, Platform } from 'react-native';
+import { Animated, AppState, AppStateStatus, InteractionManager, Platform } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
@@ -15,6 +15,7 @@ import { getUserFromSecureStorage, logoutUser } from '../services/FirebaseServic
 import { getActiveDownloadsCount } from '../utils/ModelUtils';
 import { StoredModel } from '../services/ModelDownloaderTypes';
 import { ShowDialogFn } from './useDialog';
+import { SHARE_CANCELLED_ERROR } from '../services/StoredModelsManager';
 
 const BACKGROUND_DOWNLOAD_TASK = 'background-download-task';
 const isAndroid = Platform.OS === 'android';
@@ -56,6 +57,19 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
   const [isExporting, setIsExporting] = useState(false);
   const [showStorageWarningDialog, setShowStorageWarningDialog] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
+
+  const isShareCancelledError = (error: unknown): boolean => {
+    const msg = (error as { message?: string } | undefined)?.message ?? String(error ?? '');
+    return msg.toLowerCase().includes(SHARE_CANCELLED_ERROR);
+  };
+
+  const isDuplicateModelError = (error: unknown): boolean => {
+    const msg = (error as { message?: string } | undefined)?.message ?? String(error ?? '');
+    const lower = msg.toLowerCase();
+    return lower.includes('already exists') || lower.includes('model with this name');
+  };
+
+  const normalizeModelName = (name: string): string => name.trim().toLowerCase();
   
   const buttonScale = useRef(new Animated.Value(1)).current;
   const prevActiveCount = useRef(0);
@@ -154,10 +168,19 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
         return;
       }
 
+      const existingModels = await modelDownloader.getStoredModels();
+      const pickedName = normalizeModelName(file.name);
+      const duplicate = existingModels.some(model => normalizeModelName(model.name) === pickedName);
+      if (duplicate) {
+        showDialog('Model Already Exists', `${file.name} is already imported.`);
+        return;
+      }
+
       setIsLoading(true);
       setImportingModelName(file.name);
       
       try {
+        await new Promise<void>(resolve => InteractionManager.runAfterInteractions(() => resolve()));
         await modelDownloader.linkExternalModel(file.uri, file.name);
         setIsLoading(false);
         setImportingModelName(null);
@@ -166,6 +189,10 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
       } catch (error) {
         setIsLoading(false);
         setImportingModelName(null);
+        if (isDuplicateModelError(error)) {
+          showDialog('Model Already Exists', `${file.name} is already imported.`);
+          return;
+        }
         showDialog('Error', 'Failed to import the model. Please try again.');
       }
     } catch (error) {
@@ -244,13 +271,18 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
     try {
       setIsLoading(true);
       setIsExporting(true);
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+      await new Promise<void>(resolve => InteractionManager.runAfterInteractions(() => resolve()));
       await modelDownloader.exportModel(modelPath, modelName);
-      setIsLoading(false);
-      setIsExporting(false);
     } catch (error) {
+      if (isShareCancelledError(error)) {
+        return;
+      }
+      showDialog('Share Failed', `Failed to share ${modelName}. Please try again.`);
+    } finally {
       setIsLoading(false);
       setIsExporting(false);
-      showDialog('Share Failed', `Failed to share ${modelName}. Please try again.`);
     }
   };
 

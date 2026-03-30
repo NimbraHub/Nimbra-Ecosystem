@@ -270,37 +270,7 @@ export default function ModelSettingsScreen() {
           </View>
         )}
 
-        {modelSettingsConfig.useGlobalSettings && (
-          <View style={[styles.settingCard, { backgroundColor: themeColors.borderColor }]}>
-            <View style={styles.previewContent}>
-              <Text style={[styles.previewTitle, { color: themeColors.text }]}>
-                Current Global Settings
-              </Text>
-              <Text style={[styles.previewDescription, { color: themeColors.secondaryText }]}>
-                These are the settings currently applied from your global configuration.
-              </Text>
-              
-              <View style={styles.previewGrid}>
-                <View style={styles.previewItem}>
-                  <Text style={[styles.previewLabel, { color: themeColors.secondaryText }]}>Temperature</Text>
-                  <Text style={[styles.previewValue, { color: themeColors.text }]}>{displaySettings.temperature}</Text>
-                </View>
-                <View style={styles.previewItem}>
-                  <Text style={[styles.previewLabel, { color: themeColors.secondaryText }]}>Max Tokens</Text>
-                  <Text style={[styles.previewValue, { color: themeColors.text }]}>{displaySettings.maxTokens}</Text>
-                </View>
-                <View style={styles.previewItem}>
-                  <Text style={[styles.previewLabel, { color: themeColors.secondaryText }]}>Top-K</Text>
-                  <Text style={[styles.previewValue, { color: themeColors.text }]}>{displaySettings.topK}</Text>
-                </View>
-                <View style={styles.previewItem}>
-                  <Text style={[styles.previewLabel, { color: themeColors.secondaryText }]}>Top-P</Text>
-                  <Text style={[styles.previewValue, { color: themeColors.text }]}>{displaySettings.topP}</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        )}
+
       </ScrollView>
 
       <SystemPromptDialog
@@ -421,46 +391,5 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     letterSpacing: 0.2,
   },
-  previewContent: {
-    padding: 16,
-  },
-  previewTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 6,
-    letterSpacing: 0.2,
-  },
-  previewDescription: {
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 20,
-    opacity: 0.8,
-  },
-  previewGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-  },
-  previewItem: {
-    flex: 1,
-    minWidth: '45%',
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: 'rgba(74, 6, 96, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(74, 6, 96, 0.1)',
-  },
-  previewLabel: {
-    fontSize: 13,
-    marginBottom: 6,
-    opacity: 0.7,
-    fontWeight: '500',
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
-  },
-  previewValue: {
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
 });
+

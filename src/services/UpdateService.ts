@@ -7,6 +7,9 @@ const OPEN_COUNT_KEY = '@update_open_count';
 const REMIND_HOURS = 3;
 const REMIND_OPENS = 3;
 
+const PROJECT_ID = 'a539a082-58a3-4f29-9bb7-107913124e7d';
+const OWNER = 'subhajitgorai';
+
 async function getOpenCount(): Promise<number> {
   const val = await AsyncStorage.getItem(OPEN_COUNT_KEY);
   return val ? parseInt(val, 10) : 0;
@@ -43,7 +46,7 @@ async function shouldRemind(updateId: string): Promise<boolean> {
       Date.now() - remind.timestamp >= REMIND_HOURS * 60 * 60 * 1000;
     const openCount = await getOpenCount();
     const opensPassed = openCount - remind.openCount >= REMIND_OPENS;
-    return hoursPassed && opensPassed;
+    return hoursPassed || opensPassed;
   } catch {
     return true;
   }
@@ -61,11 +64,22 @@ async function remindLater(updateId: string): Promise<void> {
   );
 }
 
+function verifyManifest(manifest: any): boolean {
+  const extra = manifest?.extra;
+  const expoClient = extra?.expoClient;
+  const manifestProjectId = expoClient?.extra?.eas?.projectId;
+  if (!manifestProjectId || manifestProjectId !== PROJECT_ID) return false;
+  const manifestOwner = expoClient?.owner;
+  if (!manifestOwner || manifestOwner !== OWNER) return false;
+  return true;
+}
+
 async function checkForUpdate(): Promise<Updates.UpdateCheckResult | null> {
   if (__DEV__ || !Updates.isEnabled) return null;
   try {
     const result = await Updates.checkForUpdateAsync();
     if (!result.isAvailable || !result.manifest) return null;
+    if (!verifyManifest(result.manifest)) return null;
     return result;
   } catch {
     return null;
@@ -85,6 +99,10 @@ function getUpdateId(manifest: any): string {
   return manifest?.id || '';
 }
 
+function isManifestAutoUpdate(manifest: any): boolean {
+  return manifest?.extra?.expoClient?.extra?.autoUpdate === true;
+}
+
 export const updateService = {
   getOpenCount,
   incrementOpenCount,
@@ -96,4 +114,5 @@ export const updateService = {
   fetchAndReload,
   getChangelog,
   getUpdateId,
+  isManifestAutoUpdate,
 };

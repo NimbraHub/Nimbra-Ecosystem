@@ -687,16 +687,21 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
   const startNewChat = async () => {
     try {
       cancelGenerationRef.current = true;
+      setIsLoading(false);
+      setIsStreaming(false);
+      setIsRegenerating(false);
+      setStreamingMessage('');
+      setStreamingThinking('');
+      setStreamingMessageId(null);
+      setStreamingStats(null);
+
       engineService.stop();
-      if (activeProvider === 'local') {
-        try { await llamaManager.stopCompletion(); } catch {}
-      } else if (activeProvider === 'apple-foundation') {
+      if (activeProvider === 'apple-foundation') {
         appleFoundationService.cancel();
       }
-      setIsLoading(false);
-      resetStreamingState();
-      cancelGenerationRef.current = true;
+
       await ChatLifecycleService.startNewChat({ setChat, setMessages });
+      cancelGenerationRef.current = false;
     } catch (error) {
       showDialog(
         'Error',
@@ -728,11 +733,10 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
 
   useEffect(() => {
     const cleanup = ModelManagementService.setupModelChangeListeners(
-      activeProvider,
       setActiveProvider
     );
     return cleanup;
-  }, [activeProvider]);
+  }, []);
 
 
 

@@ -15,7 +15,7 @@ export const DEFAULT_SETTINGS: ModelSettings = {
   penaltyRepeat: 1.0,
   penaltyFreq: 0.0,
   penaltyPresent: 0.0,
-  mirostat: 2,
+  mirostat: 0,
   mirostatTau: 5.0,
   mirostatEta: 0.1,
   dryMultiplier: 0.0,
@@ -34,7 +34,7 @@ export const DEFAULT_SETTINGS: ModelSettings = {
 export const LLAMA_INIT_CONFIG = {
   use_mlock: false,
   use_mmap: Platform.OS === 'android' ? 'smart' : 'true',
-  n_ctx: 2048,
+  n_ctx: 4096,
   n_batch: 512,
   n_ubatch: 512,
   n_parallel: 1,

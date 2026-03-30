@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
 import SettingsSection from './SettingsSection';
-import ModelSettingsCore, { GpuConfig } from './ModelSettingsCore';
+import ModelSettingsCore from './ModelSettingsCore';
 
 type ModelSettings = {
   maxTokens: number;
@@ -38,7 +38,7 @@ type ModelSettings = {
   enableThinking: boolean;
 };
 
-export type { GpuConfig };
+
 
 type ModelSettingsSectionProps = {
   modelSettings: ModelSettings;
@@ -50,12 +50,8 @@ type ModelSettingsSectionProps = {
   engineEnabled?: Record<'llama' | 'mlx', boolean>;
   onEngineToggle?: (engine: 'llama' | 'mlx', enabled: boolean) => void;
   onOpenSystemPromptDialog?: () => void;
-  onResetSystemPrompt?: () => void;
   enableRemoteModels?: boolean;
   onToggleRemoteModels?: (enabled: boolean) => void;
-  gpuConfig?: GpuConfig;
-  onToggleGpu?: (enabled: boolean) => void | Promise<void>;
-  onGpuLayersChange?: (layers: number) => void | Promise<void>;
   showAppleFoundationToggle?: boolean;
   appleFoundationEnabled?: boolean;
   onToggleAppleFoundation?: (enabled: boolean) => void;
@@ -72,12 +68,8 @@ const ModelSettingsSection = ({
   engineEnabled,
   onEngineToggle,
   onOpenSystemPromptDialog,
-  onResetSystemPrompt,
   enableRemoteModels,
   onToggleRemoteModels,
-  gpuConfig,
-  onToggleGpu,
-  onGpuLayersChange,
   showAppleFoundationToggle,
   appleFoundationEnabled,
   onToggleAppleFoundation,
@@ -91,7 +83,6 @@ const ModelSettingsSection = ({
     <SettingsSection title="MODEL SETTINGS">
       <ModelSettingsCore
         onOpenSystemPromptDialog={onOpenSystemPromptDialog}
-        onResetSystemPrompt={onResetSystemPrompt}
         systemPromptModified={defaultSettings.systemPrompt ? modelSettings.systemPrompt !== defaultSettings.systemPrompt : false}
         enableRemoteModels={enableRemoteModels}
         onToggleRemoteModels={onToggleRemoteModels}
@@ -100,9 +91,6 @@ const ModelSettingsSection = ({
         onToggleAppleFoundation={onToggleAppleFoundation}
         engineEnabled={engineEnabled}
         onEngineToggle={onEngineToggle}
-        gpuConfig={gpuConfig}
-        onToggleGpu={onToggleGpu}
-        onGpuLayersChange={onGpuLayersChange}
         onDialogOpen={onDialogOpen}
       />
 

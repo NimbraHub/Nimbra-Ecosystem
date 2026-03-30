@@ -6,6 +6,7 @@ import chatManager from '../utils/ChatManager';
 import { generateRandomId } from '../utils/homeScreenUtils';
 import { appleFoundationService } from './AppleFoundationService';
 import type { ProviderType } from './ModelManagementService';
+import { ThinkTagParser } from '../utils/thinkTagParser';
 
 interface RegenerationCallbacks {
   setMessages: (messages: ChatMessage[]) => void;
@@ -552,6 +553,8 @@ export class RegenerationService {
     isThinking: boolean,
     firstTokenTime: number | null
   ): Promise<void> {
+    const thinkParser = new ThinkTagParser();
+
     await engineService.mgr().gen(
       [...newMessages].map(msg => ({ role: msg.role, content: msg.content })) as any,
       {
@@ -559,68 +562,72 @@ export class RegenerationService {
           if (this.cancelGenerationRef.current) {
             return false;
           }
-        
-        if (token.includes('<think>')) {
-          isThinking = true;
-          return true;
-        }
-        if (token.includes('</think>')) {
-          isThinking = false;
-          return true;
-        }
-        
-        const currentTime = Date.now();
-        
-        if (firstTokenTime === null && !isThinking && token.trim().length > 0) {
-          firstTokenTime = currentTime - startTime;
-        }
-        
-        tokenCount++;
-        if (isThinking) {
-          thinking += token;
-          this.callbacks.setStreamingThinking(thinking.trim());
-        } else {
-          fullResponse += token;
-          this.callbacks.setStreamingMessage(fullResponse);
-        }
-        
-        const duration = (currentTime - startTime) / 1000;
-        let avgTokenTime = undefined;
-        
-        if (firstTokenTime !== null && tokenCount > 0 && !isThinking) {
-          const timeAfterFirstToken = currentTime - (startTime + firstTokenTime);
-          avgTokenTime = timeAfterFirstToken / Math.max(1, tokenCount);
-        }
-        
-        this.callbacks.setStreamingStats({
-          tokens: tokenCount,
-          duration: duration,
-          firstTokenTime: firstTokenTime || undefined,
-          avgTokenTime: avgTokenTime && avgTokenTime > 0 ? avgTokenTime : undefined
-        });
-        
-        if (tokenCount % 10 === 0) {
-          let debouncedAvgTokenTime = undefined;
-          if (firstTokenTime !== null && tokenCount > 0) {
-            const timeAfterFirstToken = Date.now() - (startTime + firstTokenTime);
-            debouncedAvgTokenTime = timeAfterFirstToken / Math.max(1, tokenCount);
+
+        const chunks = thinkParser.feed(token);
+
+        for (const chunk of chunks) {
+          if (chunk.type === 'open') {
+            isThinking = true;
+            continue;
           }
-          
-          const finalMessage: ChatMessage = {
-            ...assistantMessage,
-            content: fullResponse,
-            stats: {
-              duration: (Date.now() - startTime) / 1000,
-              tokens: tokenCount,
-              firstTokenTime: firstTokenTime || undefined,
-              avgTokenTime: debouncedAvgTokenTime && debouncedAvgTokenTime > 0 ? debouncedAvgTokenTime : undefined
+          if (chunk.type === 'close') {
+            isThinking = false;
+            continue;
+          }
+
+          const currentTime = Date.now();
+
+          if (firstTokenTime === null && !isThinking && chunk.text.trim().length > 0) {
+            firstTokenTime = currentTime - startTime;
+          }
+
+          tokenCount++;
+          if (isThinking) {
+            thinking += chunk.text;
+            this.callbacks.setStreamingThinking(thinking.trim());
+          } else {
+            fullResponse += chunk.text;
+            this.callbacks.setStreamingMessage(fullResponse);
+          }
+
+          const duration = (currentTime - startTime) / 1000;
+          let avgTokenTime = undefined;
+
+          if (firstTokenTime !== null && tokenCount > 0 && !isThinking) {
+            const timeAfterFirstToken = currentTime - (startTime + firstTokenTime);
+            avgTokenTime = timeAfterFirstToken / Math.max(1, tokenCount);
+          }
+
+          this.callbacks.setStreamingStats({
+            tokens: tokenCount,
+            duration: duration,
+            firstTokenTime: firstTokenTime || undefined,
+            avgTokenTime: avgTokenTime && avgTokenTime > 0 ? avgTokenTime : undefined
+          });
+
+          if (tokenCount % 10 === 0) {
+            let debouncedAvgTokenTime = undefined;
+            if (firstTokenTime !== null && tokenCount > 0) {
+              const timeAfterFirstToken = Date.now() - (startTime + firstTokenTime);
+              debouncedAvgTokenTime = timeAfterFirstToken / Math.max(1, tokenCount);
             }
-          };
-          
-          const finalMessages = [...newMessages, finalMessage];
-          this.callbacks.setMessages(finalMessages);
+
+            const finalMessage: ChatMessage = {
+              ...assistantMessage,
+              content: fullResponse,
+              stats: {
+                duration: (Date.now() - startTime) / 1000,
+                tokens: tokenCount,
+                firstTokenTime: firstTokenTime || undefined,
+                avgTokenTime: debouncedAvgTokenTime && debouncedAvgTokenTime > 0 ? debouncedAvgTokenTime : undefined
+              }
+            };
+
+            const finalMessages = [...newMessages, finalMessage];
+            this.callbacks.setMessages(finalMessages);
+          }
         }
-        
+
         return !this.cancelGenerationRef.current;
         },
         settings
