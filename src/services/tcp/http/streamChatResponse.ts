@@ -36,11 +36,16 @@ export function createStreamChatResponse(context: StreamContext) {
     const streamId = `stream-${started}-${Math.random().toString(36).slice(2, 6)}`;
     logger.startStream(streamId, model.name, path, messages);
 
+    let disconnected = false;
+    const onClose = () => { disconnected = true; engineService.stop(); };
+    socket.on('close', onClose);
+
     try {
       const full = await engineService.mgr().gen(
         messages as any,
         {
           onToken: (token: string) => {
+            if (disconnected) return false;
             logger.appendStreamToken(streamId, token);
             try {
               context.writeChunk(socket, {
@@ -65,16 +70,18 @@ export function createStreamChatResponse(context: StreamContext) {
 
       logger.endStream(streamId, duration, 200);
 
-      context.writeChunk(socket, {
-        model: model.name,
-        created_at: new Date().toISOString(),
-        response: '',
-        done: true,
-        total_duration_ms: duration,
-        output: full
-      });
+      if (!disconnected) {
+        context.writeChunk(socket, {
+          model: model.name,
+          created_at: new Date().toISOString(),
+          response: '',
+          done: true,
+          total_duration_ms: duration,
+          output: full
+        });
 
-      context.endChunkedResponse(socket);
+        context.endChunkedResponse(socket);
+      }
       logger.logWebRequest(method, path, 200);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'generation_failed';
@@ -95,6 +102,8 @@ export function createStreamChatResponse(context: StreamContext) {
         } catch {}
       }
       logger.logWebRequest(method, path, 500);
+    } finally {
+      socket.removeListener('close', onClose);
     }
   };
 }
