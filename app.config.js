@@ -101,9 +101,8 @@ export default {
     extra: {
       autoUpdate: true,
       changelog: [
-        "Added API Setup Guide with quick-start steps for connecting OpenAI-compatible clients.",
-        "Local server now lists available models with one-tap copy for easy client configuration.",
-        "Resolved critical crashes & bugfixes.",
+        "Fixed server hanging when clients disconnect during streaming.",
+        "Server now returns 503 instead of blocking when model is busy.",
       ],
       GEMINI_API_KEY: process.env.GEMINI_API_KEY,
       OPENAI_API_KEY: process.env.OPENAI_API_KEY,
