@@ -30,6 +30,7 @@ export const DEFAULT_SETTINGS: ModelSettings = {
   xtcThreshold: 0.1,
   typicalP: 1.0,
   enableThinking: true,
+  includeThinkingTokens: false,
 };
 export const LLAMA_INIT_CONFIG = {
   use_mlock: false,

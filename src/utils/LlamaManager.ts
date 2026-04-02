@@ -58,8 +58,18 @@ class LlamaManager {
 
   private genLockRelease: (() => void) | null = null;
 
+  private static GEN_LOCK_TIMEOUT = 30000;
+
   private async acquireGenLock(): Promise<void> {
-    await this.genLock;
+    const deadline = Date.now() + LlamaManager.GEN_LOCK_TIMEOUT;
+    await Promise.race([
+      this.genLock,
+      new Promise<void>((_, reject) => {
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) return reject(new Error('MODEL_BUSY'));
+        setTimeout(() => reject(new Error('MODEL_BUSY')), remaining);
+      }),
+    ]);
     let release: () => void;
     this.genLock = new Promise<void>(resolve => { release = resolve; });
     this.genLockRelease = release!;
@@ -349,7 +359,7 @@ class LlamaManager {
           }
         } catch {}
         
-        Promise.all([
+        await Promise.all([
           wasMultimodal ? withTimeout(
             this.multimodalService.releaseMultimodal(contextToRelease),
             3000
@@ -708,7 +718,7 @@ class LlamaManager {
               return false;
             }
 
-            return true;
+            return !this.isCancelled;
           }
         );
 
@@ -883,7 +893,7 @@ class LlamaManager {
           }
         } catch {}
         
-        Promise.all([
+        await Promise.all([
           wasMultimodal ? withTimeout(
             this.multimodalService.releaseMultimodal(contextToRelease),
             3000

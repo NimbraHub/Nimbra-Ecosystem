@@ -22,6 +22,79 @@ type State = {
 class MlxManager implements InferenceManager {
   private state: State = { loaded: false, modelId: '' };
 
+  private extractText(content: unknown): string {
+    if (typeof content !== 'string') {
+      return '';
+    }
+
+    const raw = content.trim();
+    if (!raw) {
+      return '';
+    }
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') {
+        return raw;
+      }
+
+      if (parsed.type === 'multimodal' && Array.isArray(parsed.content)) {
+        const textPart = parsed.content.find((item: any) => item?.type === 'text' && typeof item?.text === 'string');
+        return (textPart?.text || '').trim();
+      }
+
+      if (parsed.type === 'ocr_result') {
+        const userPrompt = typeof parsed.userPrompt === 'string' ? parsed.userPrompt.trim() : '';
+        if (userPrompt) {
+          return userPrompt;
+        }
+        const extracted = typeof parsed.extractedText === 'string' ? parsed.extractedText.trim() : '';
+        if (extracted) {
+          return extracted;
+        }
+        return '';
+      }
+
+      if (parsed.type === 'file_upload') {
+        const userContent = typeof parsed.userContent === 'string' ? parsed.userContent.trim() : '';
+        if (userContent) {
+          return userContent;
+        }
+        const instruction = typeof parsed.internalInstruction === 'string' ? parsed.internalInstruction.trim() : '';
+        if (instruction) {
+          return instruction;
+        }
+        return '';
+      }
+
+      if (parsed.type === 'image_generation') {
+        const prompt = typeof parsed.prompt === 'string' ? parsed.prompt.trim() : '';
+        if (prompt) {
+          return prompt;
+        }
+        return '';
+      }
+
+      return raw;
+    } catch {
+      return raw;
+    }
+  }
+
+  private getLastUserPrompt(messages: Msg[]): string {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      if (msg.role !== 'user') {
+        continue;
+      }
+      const text = this.extractText(msg.content);
+      if (text && text !== '...') {
+        return text;
+      }
+    }
+    return '';
+  }
+
   private getLastSegment(value: string): string {
     const cleaned = value.replace(/^file:\/\//, '').replace(/\/+$/, '');
     const parts = cleaned.split('/').filter(Boolean);
@@ -232,7 +305,7 @@ class MlxManager implements InferenceManager {
     */
     const firstMsg = messages[0];
     if (firstMsg?.role === 'system') {
-      const sysContent = typeof firstMsg.content === 'string' ? firstMsg.content : '';
+      const sysContent = this.extractText(firstMsg.content);
       LLM.systemPrompt = sysContent;
     } else if (opts?.settings?.systemPrompt !== undefined) {
       LLM.systemPrompt = opts.settings.systemPrompt;
@@ -266,7 +339,7 @@ class MlxManager implements InferenceManager {
     }
 
     const lastMessage = messages[messages.length - 1];
-    const prompt = typeof lastMessage.content === 'string' ? lastMessage.content : '';
+    const prompt = this.extractText(lastMessage?.content) || this.getLastUserPrompt(messages);
     console.log('mlx_gen_prompt', { promptLength: prompt.length, role: lastMessage.role });
     console.log('mlx_gen_prompt_full:', prompt);
 

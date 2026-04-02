@@ -1,8 +1,23 @@
 # InferrLM REST API Documentation
 
-Complete API reference for InferrLM's local HTTP server that exposes AI inference capabilities over your WiFi network.
+Complete API reference for InferrLM's local HTTP server that exposes AI inference capabilities over your local network.
 
 ## Getting Started
+
+### Quick Start
+
+1. **Start the server** — Open InferrLM, go to the **Server** tab, and toggle it on. Your URL will appear (e.g. `http://192.168.1.10:8889`).
+2. **Download a model** — Make sure at least one GGUF model is downloaded in the **Models** tab. The model name (without `.gguf`) is used in API requests.
+3. **Configure your client** — Point any OpenAI-compatible client to `http://YOUR_DEVICE_IP:8889/v1`. No API key is required — use any placeholder if the client requires one.
+4. **Send a request:**
+
+```bash
+curl -X POST http://YOUR_DEVICE_IP:8889/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "llama-3.2-1b", "messages": [{"role": "user", "content": "Hello!"}]}'
+```
+
+> This works with any application or library that supports the OpenAI API — just point it to `http://YOUR_DEVICE_IP:8889/v1`. Both devices must be on the same local network. The `.gguf` extension is optional in the model name.
 
 ### Starting the Server
 
@@ -15,7 +30,6 @@ Complete API reference for InferrLM's local HTTP server that exposes AI inferenc
 ### Configuration Options
 
 - **Auto-start**: Automatically start the server when the app launches
-- **Network Access**: Control whether external devices can access the server
 - **Port**: Default port is 8889 (configurable in settings)
 
 ### Base Configuration
@@ -30,7 +44,7 @@ Every request that generates text includes a `model` string that determines whic
 
 | Model value | Routed backend | Notes |
 |-------------|----------------|-------|
-| Stored model name (e.g. `llama-3.2-1b.gguf`) | Local GGUF running on-device | Download the GGUF via the InferrLM app first. |
+| Stored model name (e.g. `llama-3.2-1b`) | Local GGUF running on-device | Download the GGUF via the InferrLM app first. |
 | `apple-foundation` | Apple Intelligence Foundation model | iOS only. Enable in app settings and verify via `GET /api/models/apple-foundation`. |
 
 ---
@@ -44,7 +58,7 @@ Stream or complete a chat with full conversation history. Accepts local GGUF mod
 **Request Body:**
 ```json
 {
-  "model": "llama-3.2-1b.gguf",
+  "model": "llama-3.2-1b",
   "messages": [
     {"role": "system", "content": "You are a helpful assistant"},
     {"role": "user", "content": "Hello!"}
@@ -86,7 +100,7 @@ Stream or complete a chat with full conversation history. Accepts local GGUF mod
 curl -X POST http://YOUR_DEVICE_IP:8889/api/chat \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "llama-3.2-1b.gguf",
+    "model": "llama-3.2-1b",
     "messages": [{"role": "user", "content": "Explain AI"}],
     "stream": false
   }'
@@ -101,7 +115,7 @@ Generate a completion from a single prompt (no conversation context).
 **Request Body:**
 ```json
 {
-  "model": "llama-3.2-1b.gguf",
+  "model": "llama-3.2-1b",
   "prompt": "Explain quantum computing in simple terms",
   "stream": false,
   "max_tokens": 500
@@ -129,7 +143,7 @@ Generate a completion from a single prompt (no conversation context).
 ```bash
 curl -X POST http://YOUR_DEVICE_IP:8889/api/generate \
   -H "Content-Type: application/json" \
-  -d '{"model": "llama-3.2-1b.gguf", "prompt": "Hello world", "stream": false}'
+  -d '{"model": "llama-3.2-1b", "prompt": "Hello world", "stream": false}'
 ```
 
 ---
@@ -169,7 +183,7 @@ OpenAI-compatible chat completions endpoint. Drop-in replacement for apps built 
 **Request Body:**
 ```json
 {
-  "model": "llama-3.2-1b.gguf",
+  "model": "llama-3.2-1b",
   "messages": [
     {"role": "user", "content": "Hello!"}
   ],
@@ -209,7 +223,7 @@ data: [DONE]
 ```bash
 curl -X POST http://YOUR_DEVICE_IP:8889/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"model": "llama-3.2-1b.gguf", "messages": [{"role": "user", "content": "Hi"}], "stream": false}'
+  -d '{"model": "llama-3.2-1b", "messages": [{"role": "user", "content": "Hi"}], "stream": false}'
 ```
 
 ---
@@ -438,7 +452,7 @@ Get detailed information about a specific model including GGUF metadata and curr
 **Request Body** (use `name`, `model`, or `path`):
 ```json
 {
-  "model": "llama-3.2-1b.gguf"
+  "model": "llama-3.2-1b"
 }
 ```
 
@@ -470,7 +484,7 @@ Get detailed information about a specific model including GGUF metadata and curr
 ```bash
 curl -X POST http://YOUR_DEVICE_IP:8889/api/show \
   -H "Content-Type: application/json" \
-  -d '{"model": "llama-3.2-1b.gguf"}'
+  -d '{"model": "llama-3.2-1b"}'
 ```
 
 ---
@@ -514,8 +528,8 @@ Copy an existing model file under a new name.
 **Request Body:**
 ```json
 {
-  "source": "llama-3.2-1b.gguf",
-  "destination": "llama-3.2-1b-backup.gguf"
+  "source": "llama-3.2-1b",
+  "destination": "llama-3.2-1b-backup"
 }
 ```
 
@@ -534,7 +548,7 @@ Returns `409` if the destination name already exists. External models cannot be 
 ```bash
 curl -X POST http://YOUR_DEVICE_IP:8889/api/copy \
   -H "Content-Type: application/json" \
-  -d '{"source": "llama-3.2-1b.gguf", "destination": "llama-backup.gguf"}'
+  -d '{"source": "llama-3.2-1b", "destination": "llama-backup"}'
 ```
 
 ---
@@ -546,7 +560,7 @@ Delete a model from local storage.
 **Request Body** (use `name` or `path`):
 ```json
 {
-  "name": "llama-3.2-1b.gguf"
+  "name": "llama-3.2-1b"
 }
 ```
 
@@ -574,7 +588,7 @@ Perform model lifecycle operations.
 ```json
 {
   "action": "load",
-  "model": "llama-3.2-1b.gguf"
+  "model": "llama-3.2-1b"
 }
 ```
 
@@ -612,7 +626,7 @@ Perform model lifecycle operations.
 ```bash
 curl -X POST http://YOUR_DEVICE_IP:8889/api/models \
   -H "Content-Type: application/json" \
-  -d '{"action": "load", "model": "llama-3.2-1b.gguf"}'
+  -d '{"action": "load", "model": "llama-3.2-1b"}'
 ```
 
 ---
@@ -694,7 +708,7 @@ Generate embeddings for one or more texts using a local model.
 **Request Body:**
 ```json
 {
-  "model": "llama-3.2-1b.gguf",
+  "model": "llama-3.2-1b",
   "input": "The quick brown fox jumps over the lazy dog"
 }
 ```
@@ -702,7 +716,7 @@ Generate embeddings for one or more texts using a local model.
 Pass an array to embed multiple texts in one request:
 ```json
 {
-  "model": "llama-3.2-1b.gguf",
+  "model": "llama-3.2-1b",
   "input": ["First text", "Second text"]
 }
 ```
@@ -725,7 +739,7 @@ Pass an array to embed multiple texts in one request:
 ```bash
 curl -X POST http://YOUR_DEVICE_IP:8889/api/embeddings \
   -H "Content-Type: application/json" \
-  -d '{"model": "llama-3.2-1b.gguf", "input": "Sample text"}'
+  -d '{"model": "llama-3.2-1b", "input": "Sample text"}'
 ```
 
 ---
@@ -976,7 +990,7 @@ No rate limits are enforced. Performance depends on device CPU/RAM, model size, 
 curl -X POST http://YOUR_DEVICE_IP:8889/api/chat \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "llama-3.2-1b.gguf",
+    "model": "llama-3.2-1b",
     "messages": [
       {"role": "system", "content": "You are a helpful coding assistant"},
       {"role": "user", "content": "Write a Python function to calculate fibonacci"}
@@ -1004,7 +1018,7 @@ curl http://YOUR_DEVICE_IP:8889/api/tags
 # Load a model
 curl -X POST http://YOUR_DEVICE_IP:8889/api/models \
   -H "Content-Type: application/json" \
-  -d '{"action": "load", "model": "llama-3.2-1b.gguf"}'
+  -d '{"action": "load", "model": "llama-3.2-1b"}'
 
 # Check what is loaded
 curl http://YOUR_DEVICE_IP:8889/api/ps

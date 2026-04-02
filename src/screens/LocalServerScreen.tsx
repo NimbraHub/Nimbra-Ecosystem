@@ -407,7 +407,7 @@ export default function LocalServerScreen() {
                       Copy Server URL
                     </Text>
                     <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}> 
-                      Share with other devices on WiFi
+                      Share with other devices on local network
                     </Text>
                     {serverStatus.signalingURL ? (
                       <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]} numberOfLines={1}>
@@ -529,29 +529,6 @@ export default function LocalServerScreen() {
         <SettingsSection title="CONFIGURATION">
           <View style={styles.settingItem}>
             <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}>
-                <MaterialCommunityIcons name="wifi" size={22} color={iconColor} />
-              </View>
-              <View style={styles.settingTextContainer}>
-                <Text style={[styles.settingText, { color: themeColors.text }]}>
-                  Network Access
-                </Text>
-                <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
-                  Allow access from other devices on WiFi
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={allowExternalAccess}
-              onValueChange={setAllowExternalAccess}
-              thumbColor={allowExternalAccess ? themeColors.primary : themeColors.secondaryText}
-              trackColor={{ false: themeColors.borderColor, true: themeColors.primary + '40' }}
-            />
-          </View>
-
-          <View style={[styles.separator, { backgroundColor: themeColors.background }]} />
-          <View style={styles.settingItem}>
-            <View style={styles.settingLeft}>
               <View style={[styles.iconContainer, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}> 
                 <MaterialCommunityIcons name="brightness-7" size={22} color={iconColor} />
               </View>
@@ -596,22 +573,26 @@ export default function LocalServerScreen() {
           </View>
         </SettingsSection>
 
-        <SettingsSection title="ABOUT">
-          <View style={styles.settingItem}>
+        <SettingsSection title="HELP">
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={() => navigation.navigate('APISetup')}
+          >
             <View style={styles.settingLeft}>
               <View style={[styles.iconContainer, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}>
-                <MaterialCommunityIcons name="help-circle-outline" size={22} color={iconColor} />
+                <MaterialCommunityIcons name="book-open-variant" size={22} color={iconColor} />
               </View>
               <View style={styles.settingTextContainer}>
                 <Text style={[styles.settingText, { color: themeColors.text }]}>
-                  What is this?
+                  API Setup Guide
                 </Text>
                 <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
-                  Share your InferrLM chat interface with other devices on your WiFi network. Perfect for accessing your local models from computers, tablets, or other phones.
+                  Learn how to connect apps using the OpenAI API
                 </Text>
               </View>
             </View>
-          </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={themeColors.secondaryText} />
+          </TouchableOpacity>
         </SettingsSection>
       </ScrollView>
 

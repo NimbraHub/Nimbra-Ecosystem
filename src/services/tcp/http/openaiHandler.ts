@@ -332,11 +332,16 @@ export async function handleOpenAIChatCompletions(
     const localSSEBegun = Date.now();
     logger.startStream(localSSEStreamId, target.model.name, path, parsed.messages);
 
+    let disconnected = false;
+    const onClose = () => { disconnected = true; engineService.stop(); };
+    socket.on('close', onClose);
+
     try {
       await engineService.mgr().gen(
         parsed.messages as any,
         {
           onToken: (token: string) => {
+            if (disconnected) return false;
             logger.appendStreamToken(localSSEStreamId, token);
             try {
               writeSSEEvent(socket, buildSSEChunk(id, target.model.name, token, null));
@@ -346,13 +351,22 @@ export async function handleOpenAIChatCompletions(
           settings,
         }
       );
-      writeSSEEvent(socket, buildSSEChunk(id, target.model.name, '', 'stop'));
-      endSSEStream(socket);
+      if (!disconnected) {
+        writeSSEEvent(socket, buildSSEChunk(id, target.model.name, '', 'stop'));
+        endSSEStream(socket);
+      }
       logger.endStream(localSSEStreamId, Date.now() - localSSEBegun, 200);
       logger.logWebRequest(method, path, 200);
-    } catch {
-      try { endSSEStream(socket); } catch { try { socket.destroy(); } catch {} }
-      logger.logWebRequest(method, path, 500);
+    } catch (err) {
+      if (err instanceof Error && err.message === 'MODEL_BUSY') {
+        try { endSSEStream(socket); } catch { try { socket.destroy(); } catch {} }
+        logger.logWebRequest(method, path, 503);
+      } else {
+        try { endSSEStream(socket); } catch { try { socket.destroy(); } catch {} }
+        logger.logWebRequest(method, path, 500);
+      }
+    } finally {
+      socket.removeListener('close', onClose);
     }
     return;
   }
@@ -370,9 +384,12 @@ export async function handleOpenAIChatCompletions(
     });
     sendJSONResponse(socket, 200, buildCompletion(id, target.model.name, text as string));
     logger.logWebRequest(method, path, 200);
-  } catch {
-    sendJSONResponse(socket, 500, { error: { message: 'generation_failed', type: 'server_error' } });
-    logger.logWebRequest(method, path, 500);
+  } catch (err) {
+    const busy = err instanceof Error && err.message === 'MODEL_BUSY';
+    const status = busy ? 503 : 500;
+    const msg = busy ? 'model_busy' : 'generation_failed';
+    sendJSONResponse(socket, status, { error: { message: msg, type: 'server_error' } });
+    logger.logWebRequest(method, path, status);
   }
 }
 

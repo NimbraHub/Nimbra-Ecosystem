@@ -288,6 +288,16 @@ export class TCPServer {
       }
     }
 
+    if (!target && !normalized.endsWith('.gguf')) {
+      const withExt = normalized + '.gguf';
+      target = models.find(item => item.name.toLowerCase() === withExt);
+    }
+
+    if (!target && normalized.endsWith('.gguf')) {
+      const withoutExt = normalized.slice(0, -5);
+      target = models.find(item => item.name.toLowerCase() === withoutExt);
+    }
+
     return target || null;
   }
 

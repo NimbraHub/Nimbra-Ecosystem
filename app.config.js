@@ -101,7 +101,8 @@ export default {
     extra: {
       autoUpdate: true,
       changelog: [
-        "Resolved critical crashes & bugfixes.",
+        "Fixed server hanging when clients disconnect during streaming.",
+        "Server now returns 503 instead of blocking when model is busy.",
       ],
       GEMINI_API_KEY: process.env.GEMINI_API_KEY,
       OPENAI_API_KEY: process.env.OPENAI_API_KEY,

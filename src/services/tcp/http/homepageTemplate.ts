@@ -160,11 +160,32 @@ export function getHomepageHTML(): string {
     <p class="subtitle">Complete API reference for local AI inference</p>
 
     <div class="nav">
+      <button class="nav-btn" onclick="document.getElementById('setup').scrollIntoView({behavior:'smooth'})">Quick Start</button>
       <button class="nav-btn" onclick="document.getElementById('openai').scrollIntoView({behavior:'smooth'})">OpenAI Compatible</button>
       <button class="nav-btn" onclick="document.getElementById('chat').scrollIntoView({behavior:'smooth'})">Chat</button>
       <button class="nav-btn" onclick="document.getElementById('models').scrollIntoView({behavior:'smooth'})">Models</button>
       <button class="nav-btn" onclick="document.getElementById('rag').scrollIntoView({behavior:'smooth'})">RAG</button>
       <button class="nav-btn" onclick="document.getElementById('server').scrollIntoView({behavior:'smooth'})">Server</button>
+    </div>
+
+    <div id="setup" class="section">
+      <h2 class="section-title">Quick Start</h2>
+      <p style="color:#666;margin-bottom:20px;line-height:1.6;">Get up and running with the InferrLM API in minutes. Works with any OpenAI-compatible client.</p>
+
+      <div class="endpoint-card" style="border-left-color:#10b981;">
+        <p class="endpoint-desc"><strong>1. Start the Server</strong> &mdash; Toggle the server switch in the InferrLM app. Your URL will appear (e.g. <code>http://192.168.1.10:8889</code>).</p>
+        <p class="endpoint-desc"><strong>2. Download a Model</strong> &mdash; Ensure at least one GGUF model is downloaded in the Models tab.</p>
+        <p class="endpoint-desc"><strong>3. Configure Your Client</strong> &mdash; Set the base URL to <code>http://&lt;device-ip&gt;:8889/v1</code>. No API key required &mdash; use any placeholder if needed.</p>
+        <p class="endpoint-desc"><strong>4. Set the Model Name</strong> &mdash; Use the model name from the Models tab (e.g. <code>llama-3.2-1b</code>). The <code>.gguf</code> extension is optional.</p>
+        <p class="endpoint-desc" style="margin-bottom:0;"><strong>5. Send a Request</strong></p>
+      </div>
+      <pre class="code-block">curl -X POST http://&lt;device-ip&gt;:8889/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "llama-3.2-1b", "messages": [{"role": "user", "content": "Hello!"}]}'</pre>
+
+      <div class="endpoint-card" style="border-left-color:#667eea;margin-top:20px;">
+        <p class="endpoint-desc" style="margin-bottom:0;">This works with any application or library that supports the OpenAI API &mdash; just point it to <code>http://&lt;device-ip&gt;:8889/v1</code>. Both devices must be on the same local network.</p>
+      </div>
     </div>
 
     <div id="openai" class="section">
@@ -179,7 +200,7 @@ export function getHomepageHTML(): string {
         <p class="endpoint-desc">Chat completions with streaming (SSE) support. Compatible with OpenAI client libraries and plugins.</p>
         <div class="code-label">Request:</div>
         <pre class="code-block">{
-  "model": "llama-3.2-1b.gguf",
+  "model": "llama-3.2-1b",
   "messages": [
     {"role": "system", "content": "You are a helpful assistant"},
     {"role": "user", "content": "Hello!"}
@@ -200,7 +221,7 @@ data: [DONE]</pre>
         <pre class="code-block">{
   "id": "chatcmpl-...",
   "object": "chat.completion",
-  "model": "llama-3.2-1b.gguf",
+  "model": "llama-3.2-1b",
   "choices": [{
     "index": 0,
     "message": {"role": "assistant", "content": "Hi there!"},
@@ -238,7 +259,7 @@ data: [DONE]</pre>
         <p class="endpoint-desc">Stream chat completions with conversation history. Use local GGUF names or <code>apple-foundation</code> in the <code>model</code> field.</p>
         <div class="code-label">Request:</div>
         <pre class="code-block">{
-  "model": "llama-3.2-1b.gguf",
+  "model": "llama-3.2-1b",
   "messages": [
     {"role": "system", "content": "You are a helpful assistant"},
     {"role": "user", "content": "Hello!"}
@@ -355,7 +376,7 @@ data: [DONE]</pre>
         <p class="endpoint-desc">Get detailed information about a model including GGUF metadata and current settings. Use <code>name</code>, <code>model</code>, or <code>path</code> in the request.</p>
         <div class="code-label">Request:</div>
         <pre class="code-block">{
-  "model": "llama-3.2-1b.gguf"
+  "model": "llama-3.2-1b"
 }</pre>
         <div class="code-label">Response:</div>
         <pre class="code-block">{
@@ -379,12 +400,12 @@ data: [DONE]</pre>
         <div class="code-label">Request:</div>
         <pre class="code-block">{
   "url": "https://huggingface.co/model.gguf",
-  "model": "my-custom-model.gguf"
+  "model": "my-custom-model"
 }</pre>
         <div class="code-label">Response:</div>
         <pre class="code-block">{
   "status": "downloading",
-  "model": "my-custom-model.gguf",
+  "model": "my-custom-model",
   "downloadId": "download-abc123"
 }</pre>
       </div>
@@ -397,14 +418,14 @@ data: [DONE]</pre>
         <p class="endpoint-desc">Copy an existing model file under a new name. Returns 409 if the destination already exists. External models cannot be copied.</p>
         <div class="code-label">Request:</div>
         <pre class="code-block">{
-  "source": "llama-3.2-1b.gguf",
-  "destination": "llama-backup.gguf"
+  "source": "llama-3.2-1b",
+  "destination": "llama-backup"
 }</pre>
         <div class="code-label">Response:</div>
         <pre class="code-block">{
   "status": "copied",
-  "source": "llama-3.2-1b.gguf",
-  "destination": "llama-backup.gguf"
+  "source": "llama-3.2-1b",
+  "destination": "llama-backup"
 }</pre>
       </div>
 
@@ -416,7 +437,7 @@ data: [DONE]</pre>
         <p class="endpoint-desc">Delete a model from local storage</p>
         <div class="code-label">Request:</div>
         <pre class="code-block">{
-  "name": "llama-3.2-1b.gguf"
+  "name": "llama-3.2-1b"
 }</pre>
         <div class="code-label">Response:</div>
         <pre class="code-block">{
@@ -437,7 +458,7 @@ data: [DONE]</pre>
         <div class="code-label">Request (load/unload):</div>
         <pre class="code-block">{
   "action": "load",
-  "model": "llama-3.2-1b.gguf"
+  "model": "llama-3.2-1b"
 }</pre>
         <div class="code-label">Response:</div>
         <pre class="code-block">{
@@ -503,7 +524,7 @@ data: [DONE]</pre>
         <p class="endpoint-desc">Generate embeddings for text</p>
         <div class="code-label">Request:</div>
         <pre class="code-block">{
-  "model": "llama-3.2-1b.gguf",
+  "model": "llama-3.2-1b",
   "input": "The quick brown fox"
 }</pre>
         <div class="code-label">Response:</div>
@@ -511,7 +532,7 @@ data: [DONE]</pre>
   "embeddings": [
     [0.123, -0.456, 0.789, ...]
   ],
-  "model": "llama-3.2-1b.gguf"
+  "model": "llama-3.2-1b"
 }</pre>
       </div>
 
