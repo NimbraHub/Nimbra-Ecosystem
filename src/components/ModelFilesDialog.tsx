@@ -163,26 +163,26 @@ export default function ModelFilesDialog({
 
         <View style={styles.fileInfo}>
           <View style={styles.fileDetails}>
-            <View style={[styles.fileChip, styles.sizeChip]}>
-              <MaterialCommunityIcons name="download" size={14} color={themeColors.text} style={styles.chipIcon} />
-              <Text style={[styles.chipText, { color: themeColors.text }]}>{huggingFaceService.formatModelSize(file.size)}</Text>
+            <View style={[styles.fileChip, { backgroundColor: currentTheme === 'dark' ? 'rgba(156, 56, 192, 0.2)' : 'rgba(74, 6, 96, 0.1)' }]}>
+              <MaterialCommunityIcons name="download" size={14} color={currentTheme === 'dark' ? '#C97EEA' : '#4a0660'} style={styles.chipIcon} />
+              <Text style={[styles.chipText, { color: currentTheme === 'dark' ? '#C97EEA' : '#4a0660' }]}>{huggingFaceService.formatModelSize(file.size)}</Text>
             </View>
             {isGGUFModel && (
-              <View style={[styles.fileChip, styles.quantChip]}>
-                <MaterialCommunityIcons name="cog" size={14} color={themeColors.text} style={styles.chipIcon} />
-                <Text style={[styles.chipText, { color: themeColors.text }]}>{huggingFaceService.extractQuantization(file.filename)}</Text>
+              <View style={[styles.fileChip, { backgroundColor: currentTheme === 'dark' ? 'rgba(25, 118, 210, 0.25)' : 'rgba(25, 118, 210, 0.1)' }]}>
+                <MaterialCommunityIcons name="cog" size={14} color={currentTheme === 'dark' ? '#64B5F6' : '#1565C0'} style={styles.chipIcon} />
+                <Text style={[styles.chipText, { color: currentTheme === 'dark' ? '#64B5F6' : '#1565C0' }]}>{huggingFaceService.extractQuantization(file.filename)}</Text>
               </View>
             )}
             {isMLXModel && isRequiredMLXFile(file.filename) && (
-              <View style={[styles.fileChip, styles.mlxRequiredChip]}>
-                <MaterialCommunityIcons name="apple" size={14} color={themeColors.text} style={styles.chipIcon} />
-                <Text style={[styles.chipText, { color: themeColors.text }]}>Required</Text>
+              <View style={[styles.fileChip, { backgroundColor: currentTheme === 'dark' ? 'rgba(0, 122, 255, 0.25)' : 'rgba(0, 122, 255, 0.1)' }]}>
+                <MaterialCommunityIcons name="apple" size={14} color={currentTheme === 'dark' ? '#5AC8FA' : '#007AFF'} style={styles.chipIcon} />
+                <Text style={[styles.chipText, { color: currentTheme === 'dark' ? '#5AC8FA' : '#007AFF' }]}>Required</Text>
               </View>
             )}
             {modelDetails?.hasVision && file.filename.toLowerCase().includes('mmproj') && (
-              <View style={[styles.fileChip, styles.projectionChip]}>
-                <MaterialCommunityIcons name="eye-settings" size={14} color={themeColors.text} style={styles.chipIcon} />
-                <Text style={[styles.chipText, { color: themeColors.text }]}>Projection</Text>
+              <View style={[styles.fileChip, { backgroundColor: currentTheme === 'dark' ? 'rgba(123, 44, 191, 0.25)' : 'rgba(123, 44, 191, 0.1)' }]}>
+                <MaterialCommunityIcons name="eye-settings" size={14} color={currentTheme === 'dark' ? '#C97EEA' : '#7B2CBF'} style={styles.chipIcon} />
+                <Text style={[styles.chipText, { color: currentTheme === 'dark' ? '#C97EEA' : '#7B2CBF' }]}>Projection</Text>
               </View>
             )}
           </View>
@@ -244,6 +244,15 @@ export default function ModelFilesDialog({
               <MaterialCommunityIcons name="close" size={24} color={themeColors.text} />
             </TouchableOpacity>
           </View>
+
+          {modelDetails.hasVision && (
+            <View style={[styles.visionWarning, { backgroundColor: currentTheme === 'dark' ? 'rgba(123, 44, 191, 0.18)' : 'rgba(123, 44, 191, 0.08)', borderColor: currentTheme === 'dark' ? 'rgba(156, 56, 192, 0.45)' : 'rgba(123, 44, 191, 0.25)' }]}>
+              <MaterialCommunityIcons name="eye" size={16} color="#7B2CBF" style={styles.visionWarningIcon} />
+              <Text style={[styles.visionWarningText, { color: currentTheme === 'dark' ? '#C97EEA' : '#7B2CBF' }]}>
+                Vision models require both a base model file and the mmproj projection file to process images.
+              </Text>
+            </View>
+          )}
 
           <View style={styles.filesHeader}>
             <View style={styles.filesHeaderTop}>
@@ -520,17 +529,23 @@ const styles = StyleSheet.create({
   chipIcon: {
     marginRight: 2,
   },
-  sizeChip: {
-    backgroundColor: 'rgba(74, 6, 96, 0.1)',
+  visionWarning: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 16,
   },
-  quantChip: {
-    backgroundColor: 'rgba(25, 118, 210, 0.1)',
+  visionWarningIcon: {
+    marginRight: 8,
+    marginTop: 1,
   },
-  projectionChip: {
-    backgroundColor: 'rgba(123, 44, 191, 0.1)',
-  },
-  mlxRequiredChip: {
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+  visionWarningText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '500',
   },
   chipText: {
     fontSize: 12,
