@@ -6,7 +6,6 @@ import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
 import { getThemeAwareColor } from '../../utils/ColorUtils';
 import { DownloadableModel } from './DownloadableModelItem';
-import VisionDownloadDialog from '../VisionDownloadDialog';
 import ModelFilesDialog from '../ModelFilesDialog';
 import Dialog from '../Dialog';
 import { FilterOptions } from '../ModelFilter';
@@ -50,11 +49,7 @@ const UnifiedModelList: React.FC<UnifiedModelListProps> = ({
     logic.hfModels,
     logic.selectedModel,
     logic.setSelectedModel,
-    logic.selectedVisionModel,
-    logic.setSelectedVisionModel,
-    logic.setVisionDialogVisible,
     logic.setPendingDownload,
-    logic.setPendingVisionDownload,
     logic.setShowWarningDialog,
     logic.setSelectedFiles,
     logic.proceedWithDownload,
@@ -69,7 +64,7 @@ const UnifiedModelList: React.FC<UnifiedModelListProps> = ({
   );
 
   const handleWarningAccept = async (dontShowAgain: boolean) => {
-    await handlers.handleWarningAccept(dontShowAgain, logic.pendingDownload, logic.pendingVisionDownload);
+    await handlers.handleWarningAccept(dontShowAgain, logic.pendingDownload);
   };
 
   return (
@@ -186,18 +181,6 @@ const UnifiedModelList: React.FC<UnifiedModelListProps> = ({
           autoCorrect={false}
         />
       </Dialog>
-
-      {logic.selectedVisionModel && (
-        <VisionDownloadDialog
-          visible={logic.visionDialogVisible}
-          onDismiss={() => {
-            logic.setVisionDialogVisible(false);
-            logic.setSelectedVisionModel(null);
-          }}
-          model={logic.selectedVisionModel}
-          onDownload={handlers.handleVisionDownload}
-        />
-      )}
     </View>
   );
 };

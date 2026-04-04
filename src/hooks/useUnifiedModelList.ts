@@ -24,8 +24,6 @@ export const useUnifiedModelList = (
   const [dialogVisible, setDialogVisible] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
   const [dialogMessage, setDialogMessage] = useState('');
-  const [visionDialogVisible, setVisionDialogVisible] = useState(false);
-  const [selectedVisionModel, setSelectedVisionModel] = useState<DownloadableModel | null>(null);
   const [showingHfResults, setShowingHfResults] = useState(false);
   const [showWarningDialog, setShowWarningDialog] = useState(false);
   const [pendingDownload, setPendingDownload] = useState<{
@@ -34,13 +32,6 @@ export const useUnifiedModelList = (
     modelId: string, 
     curatedModel?: DownloadableModel,
     filesToDownload?: any[]
-  } | null>(null);
-  const [pendingVisionDownload, setPendingVisionDownload] = useState<{
-    filename: string, 
-    downloadUrl: string, 
-    modelId: string, 
-    includeVision: boolean,
-    modelDetails: HFModelDetails
   } | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [forceRender, setForceRender] = useState(0);
@@ -438,12 +429,9 @@ export const useUnifiedModelList = (
     dialogVisible,
     dialogTitle,
     dialogMessage,
-    visionDialogVisible,
-    selectedVisionModel,
     showingHfResults,
     showWarningDialog,
     pendingDownload,
-    pendingVisionDownload,
     selectedFiles,
     forceRender,
     mlxDirDialogVisible,
@@ -467,11 +455,8 @@ export const useUnifiedModelList = (
     proceedWithCuratedDownload,
     setSelectedModel,
     setSelectedFiles,
-    setVisionDialogVisible,
-    setSelectedVisionModel,
     setShowWarningDialog,
     setPendingDownload,
-    setPendingVisionDownload,
     setMlxDirName,
   };
 };

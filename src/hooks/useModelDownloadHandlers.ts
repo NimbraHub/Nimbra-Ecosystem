@@ -8,11 +8,7 @@ export const useModelDownloadHandlers = (
   hfModels: HFModel[],
   selectedModel: HFModelDetails | null,
   setSelectedModel: (model: HFModelDetails | null) => void,
-  selectedVisionModel: DownloadableModel | null,
-  setSelectedVisionModel: (model: DownloadableModel | null) => void,
-  setVisionDialogVisible: (visible: boolean) => void,
   setPendingDownload: (download: any) => void,
-  setPendingVisionDownload: (download: any) => void,
   setShowWarningDialog: (show: boolean) => void,
   setSelectedFiles: (files: Set<string>) => void,
   proceedWithDownload: (filename: string, downloadUrl: string, modelId?: string) => Promise<void>,
@@ -27,132 +23,8 @@ export const useModelDownloadHandlers = (
 ) => {
   const navigation = useNavigation();
 
-  const handleVisionDownload = async (includeVision: boolean, projectionFile?: any) => {
-    if (!selectedVisionModel) return;
-
-    const hfModel = hfModels.find(hf => 
-      hf.id.includes(selectedVisionModel.name) || 
-      selectedVisionModel.name.includes(hf.id.split('/').pop() || '')
-    );
-    
-    if (!hfModel) {
-      showDialog('Error', 'Could not find model details');
-      return;
-    }
-
-    try {
-      const details = await huggingFaceService.getModelDetails(hfModel.id);
-      
-      const mainFile = details.files.find(f => 
-        f.filename.endsWith('.gguf') && !f.filename.toLowerCase().includes('mmproj')
-      );
-      
-      if (!mainFile) {
-        showDialog('Error', 'Could not find main model file');
-        return;
-      }
-
-      await startDownloadWithVisionSupport(mainFile.filename, mainFile.downloadUrl, details.id, includeVision, details);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      showDialog('Error', 'Failed to load model details. Please try again.');
-    }
-  };
-
-  const startDownloadWithVisionSupport = async (
-    filename: string, 
-    downloadUrl: string, 
-    modelId: string, 
-    includeVision: boolean,
-    modelDetails: HFModelDetails
-  ) => {
-    const hideWarning = await AsyncStorage.getItem('hideModelWarning');
-    
-    const downloadFiles = [{ filename, downloadUrl }];
-    
-    if (includeVision) {
-      const mmprojFile = modelDetails.files.find(f => 
-        f.filename.toLowerCase().includes('mmproj') && f.filename.endsWith('.gguf')
-      );
-      
-      if (mmprojFile) {
-        downloadFiles.push({ 
-          filename: mmprojFile.filename, 
-          downloadUrl: mmprojFile.downloadUrl 
-        });
-      }
-    }
-
-    const startDownload = async () => {
-      navigation.navigate('Downloads' as never);
-
-      const downloadPromises = downloadFiles.map(async (file) => {
-        const fullFilename = file.filename;
-        
-        try {
-          setDownloadProgress((prev: any) => ({
-            ...prev,
-            [fullFilename]: {
-              progress: 0,
-              bytesDownloaded: 0,
-              totalBytes: 0,
-              status: 'starting',
-              downloadId: 0
-            }
-          }));
-
-          const { downloadId } = await modelDownloader.downloadModel(
-            file.downloadUrl,
-            fullFilename,
-            huggingFaceService.getAccessToken(),
-          );
-          
-          setDownloadProgress((prev: any) => ({
-            ...prev,
-            [fullFilename]: {
-              ...prev[fullFilename],
-              downloadId
-            }
-          }));
-
-        } catch (error) {
-          setDownloadProgress((prev: any) => {
-            const newProgress = { ...prev };
-            delete newProgress[fullFilename];
-            return newProgress;
-          });
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          showDialog('Download Error', `Failed to start download for ${file.filename}. Please try again.`);
-        }
-      });
-
-      await Promise.allSettled(downloadPromises);
-    };
-
-    if (hideWarning === 'true') {
-      await startDownload();
-    } else {
-      setPendingVisionDownload({ filename, downloadUrl, modelId, includeVision, modelDetails });
-      setShowWarningDialog(true);
-    }
-  };
-
   const handleDownloadFile = async (filename: string, downloadUrl: string) => {
     const modelId = selectedModel?.id || '';
-    
-    const isVisionModel = selectedModel?.hasVision;
-    const isMainModelFile = filename.endsWith('.gguf') && !filename.toLowerCase().includes('mmproj');
-    
-    if (isVisionModel && isMainModelFile) {
-      const hfModel = hfModels.find(hf => hf.id === modelId);
-      if (hfModel) {
-        const convertedModel = convertHfModelToDownloadable(hfModel);
-        setSelectedModel(null);
-        setSelectedVisionModel(convertedModel);
-        setVisionDialogVisible(true);
-        return;
-      }
-    }
     
     setSelectedModel(null);
     setSelectedFiles(new Set());
@@ -247,7 +119,7 @@ export const useModelDownloadHandlers = (
     }
   };
 
-  const handleWarningAccept = async (dontShowAgain: boolean, pendingDownload: any, pendingVisionDownload: any) => {
+  const handleWarningAccept = async (dontShowAgain: boolean, pendingDownload: any) => {
     if (dontShowAgain) {
       try {
         await AsyncStorage.setItem('hideModelWarning', 'true');
@@ -257,71 +129,7 @@ export const useModelDownloadHandlers = (
     
     setShowWarningDialog(false);
     
-    if (pendingVisionDownload) {
-      navigation.navigate('Downloads' as never);
-      
-      const downloadFiles = [{ 
-        filename: pendingVisionDownload.filename, 
-        downloadUrl: pendingVisionDownload.downloadUrl 
-      }];
-      
-      if (pendingVisionDownload.includeVision) {
-        const mmprojFile = pendingVisionDownload.modelDetails.files.find((f: any) => 
-          f.filename.toLowerCase().includes('mmproj') && f.filename.endsWith('.gguf')
-        );
-        
-        if (mmprojFile) {
-          downloadFiles.push({ 
-            filename: mmprojFile.filename, 
-            downloadUrl: mmprojFile.downloadUrl 
-          });
-        }
-      }
-
-      const downloadPromises = downloadFiles.map(async (file) => {
-        const fullFilename = file.filename;
-        
-        try {
-          setDownloadProgress((prev: any) => ({
-            ...prev,
-            [fullFilename]: {
-              progress: 0,
-              bytesDownloaded: 0,
-              totalBytes: 0,
-              status: 'starting',
-              downloadId: 0
-            }
-          }));
-
-          const { downloadId } = await modelDownloader.downloadModel(
-            file.downloadUrl,
-            fullFilename,
-            huggingFaceService.getAccessToken(),
-          );
-          
-          setDownloadProgress((prev: any) => ({
-            ...prev,
-            [fullFilename]: {
-              ...prev[fullFilename],
-              downloadId
-            }
-          }));
-
-        } catch (error) {
-          setDownloadProgress((prev: any) => {
-            const newProgress = { ...prev };
-            delete newProgress[fullFilename];
-            return newProgress;
-          });
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          showDialog('Download Error', `Failed to start download for ${file.filename}. Please try again.`);
-        }
-      });
-
-      await Promise.allSettled(downloadPromises);
-      
-      setPendingVisionDownload(null);
-    } else if (pendingDownload) {
+    if (pendingDownload) {
       const isHuggingFaceModel = pendingDownload.modelId.includes('/');
       const isMultipleFiles = Boolean(pendingDownload.filesToDownload);
       
@@ -351,11 +159,9 @@ export const useModelDownloadHandlers = (
   const handleWarningCancel = () => {
     setShowWarningDialog(false);
     setPendingDownload(null);
-    setPendingVisionDownload(null);
   };
 
   return {
-    handleVisionDownload,
     handleDownloadFile,
     handleDownloadMLXModel,
     handleDownloadSelected,
