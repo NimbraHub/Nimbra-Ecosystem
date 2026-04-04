@@ -44,7 +44,7 @@ export default function WideScreenLayout({}: WideScreenLayoutProps) {
   const MIN_SIDEBAR_WIDTH = 200;
   const MAX_SIDEBAR_WIDTH = screenWidth * 0.6;
 
-  const TAB_BAR_W = 85;
+  const TAB_BAR_W = 75;
   const chatWidth = screenWidth - sidebarWidth - TAB_BAR_W;
 
   const loadSidebarWidth = async () => {
