@@ -1,0 +1,13 @@
+{
+  "environment": "development",
+
+  "logging": {
+    "level": "debug",
+    "destinations": ["console", "file"],
+    "filePath": "./logs/app.log"
+  },
+  "features": {
+    "enableDiagnostics": true,
+    "enableRealTimeAlerts": false
+  }
+}

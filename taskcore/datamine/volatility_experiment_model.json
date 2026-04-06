@@ -1,0 +1,39 @@
+export interface ExperimentParameters {
+  tokenSymbol: string
+  analysisWindowMinutes: number
+  volatilityThreshold: number
+}
+
+export interface ExperimentResults {
+  averagePrice: number
+  volatility: number
+  maxPrice: number
+  minPrice: number
+  alertsTriggered: boolean
+}
+
+export type ExperimentStatus = "draft" | "running" | "completed" | "failed"
+
+export interface ExperimentRecord {
+  experimentId: string
+  createdAt: string
+  description: string
+  parameters: ExperimentParameters
+  status: ExperimentStatus
+  results: ExperimentResults | null
+  notes: string
+}
+
+export const sampleExperiment: ExperimentRecord = {
+  experimentId: "exp-001",
+  createdAt: new Date().toISOString(),
+  description: "Baseline volatility analysis on SOL",
+  parameters: {
+    tokenSymbol: "SOL",
+    analysisWindowMinutes: 60,
+    volatilityThreshold: 0.05,
+  },
+  status: "draft",
+  results: null,
+  notes: "Initial test setup, no live results yet",
+}
